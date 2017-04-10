@@ -221,7 +221,12 @@ def make_segment(parent, chromosome, start, end, height):
 	return segment
 
 
-def make_aberration(parent, chromosome, start, end, comment=None, confirmation=None):
+def make_aberration(parent, chromosome, start, end, comment=None, method='VCF conversion', confirmation=None):
+	"""
+	comment -- string
+	method -- short string
+	confirmation -- string
+	"""
 	aberration = etree.SubElement(parent, 'aberration')
 	aberration.attrib.update(dict(
 		chr=chromosome,
@@ -246,7 +251,7 @@ def make_aberration(parent, chromosome, start, end, comment=None, confirmation=N
 		gain='true',
 		inheritanceCoverage='0.0',
 		logRatio='-0.4444',  # mean log ratio
-		method='converted from VCF',
+		method=method,
 		p='0.003333',  # p-value
 		sd='0.2222',  # standard deviation
 	))
@@ -277,7 +282,7 @@ def spaced_probes(start, end):
 
 
 def format_comment(info: dict) -> str:
-	comment = info['SVTYPE']
+	comment = ''
 	for k, v in sorted(info.items()):
 		if k in ('CSQ', 'SVTYPE'):
 			continue
@@ -304,7 +309,7 @@ def main():
 		make_segment(segmentation, event.chrom, event.start, event.end, height)
 
 		comment = format_comment(event.info)
-		make_aberration(submission, event.chrom, event.start, event.end, comment=comment)
+		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type, comment=comment)
 
 		# show probes at slightly different height than segments
 		height *= 1.05
