@@ -2,17 +2,6 @@
 """
 Convert structural variants in a VCF to CGH (CytoSure) format
 """
-# We handle the following variant types:
-# DEL  Deletion: height -1
-# DUP  Duplication: height +1
-# TDUP Tandem duplication: height +1.5
-# IDUP Interspersed duplication: height +0.5
-# INV  Inversion: height -0.5
-# INS  Shown as an upwards-pointing "triangle" of probes
-#
-#  We do not handle the following ones:
-#
-# BND  Break end
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import sys
