@@ -8,11 +8,11 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 # TDUP Tandem duplication: height +1.5
 # IDUP Interspersed duplication: height +0.5
 # INV  Inversion: height -0.5
+# INS  Shown as an upwards-pointing "triangle" of probes
 #
-# We do not handle the following ones:
+#  We do not handle the following ones:
 #
 # BND  Break end
-# INS  Insertion
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import sys
@@ -123,12 +123,12 @@ def parse_vcf(path):
 			continue
 		chrom = variant.CHROM
 		start = variant.start
-		sv_type = variant.ALT[0][1:-1]
-		if sv_type in ('DEL', 'DUP', 'IDUP', 'TDUP', 'INV'):
+		sv_type = variant.INFO.get('SVTYPE')
+		if sv_type in ('DEL', 'DUP', 'IDUP', 'TDUP', 'INV', 'INS'):
 			end = variant.INFO.get('END')
 			assert start <= end
-			assert variant.INFO.get('SVTYPE') == sv_type
-
+			if sv_type not in ('IDUP', 'INS'):
+				assert sv_type == variant.ALT[0][1:-1]  # <DUP> etc.
 			logger.info('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
 			assert len(variant.REF) == 1
 
@@ -281,6 +281,16 @@ def spaced_probes(start, end):
 		pos = start + int(i * spacing)
 
 
+def triangle_probes(center, height=2.5, width=5001, steps=15):
+	"""
+	Yield probes that "draw" a triangular shape (pointing upwards)
+	"""
+	pos_step = (width - 1) // (steps - 1)
+	height_step = height / ((steps - 1) // 2)
+	for i in range(-(steps // 2), steps // 2 + 1):
+		yield center + i * pos_step, height - height_step * abs(i) + 0.1
+
+
 def format_comment(info: dict) -> str:
 	comment = ''
 	for k, v in sorted(info.items()):
@@ -305,16 +315,20 @@ def main():
 	submission = tree.xpath('/data/cgh/submission')[0]
 
 	for event in parse_vcf(args.vcf):
-		height = {'DEL': -1.0, 'DUP': +1.0, 'TDUP': +1.5, 'IDUP': +0.5, 'INV': -0.5}[event.type]
+		height = {'DEL': -1.0, 'DUP': +1.0, 'TDUP': +1.5, 'IDUP': +0.5, 'INV': -0.5, 'INS': -1.5}[event.type]
 		make_segment(segmentation, event.chrom, event.start, event.end, height)
 
 		comment = format_comment(event.info)
 		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type, comment=comment)
 
-		# show probes at slightly different height than segments
-		height *= 1.05
-		for pos in spaced_probes(event.start, event.end - 1):
-			make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
+		if event.type == 'INS':
+			for pos, height in triangle_probes(event.start):
+				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
+		else:
+			# show probes at slightly different height than segments
+			height *= 1.05
+			for pos in spaced_probes(event.start, event.end - 1):
+				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 
 	tree.write(sys.stdout.buffer, pretty_print=True)
 
