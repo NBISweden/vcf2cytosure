@@ -249,7 +249,8 @@ def make_segment(parent, chromosome, start, end, height):
 	return segment
 
 
-def make_aberration(parent, chromosome, start, end, comment=None, method='VCF conversion', confirmation=None):
+def make_aberration(parent, chromosome, start, end, comment=None, method='VCF conversion',
+		confirmation=None, n_probes=0):
 	"""
 	comment -- string
 	method -- short string
@@ -265,7 +266,7 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='VCF co
 		initialClassification='Unclassified',
 		finalClassification='Unclassified',
 		inheritance='Not_tested',
-		numProbes='99',
+		numProbes=str(n_probes),
 		startProbe='',
 		stopProbe='',
 		maxStartProbe='',
@@ -367,7 +368,8 @@ def main():
 		make_segment(segmentation, event.chrom, event.start, event.end, height)
 
 		comment = format_comment(event.info)
-		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type, comment=comment)
+		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type,
+			comment=comment, n_probes=event.info['OCC'])
 
 		if event.type == 'INS':
 			for pos, height in triangle_probes(event.start):
