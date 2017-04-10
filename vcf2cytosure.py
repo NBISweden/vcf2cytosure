@@ -260,20 +260,20 @@ def make_aberration(parent, chromosome, start, end, comment=None, confirmation=N
 
 
 def spaced_probes(start, end):
-    """
-    Yield nicely spaced positions along the interval (start, end).
-    - start and end are always included
-    - at least three positions are included
-    """
-    l = end - start
-    n = l // PROBE_SPACING
-    spacing = l / max(n, 2)  # float division
-    i = 0
-    pos = start
-    while pos <= end:
-        yield pos
-        i += 1
-        pos = start + int(i * spacing)
+	"""
+	Yield nicely spaced positions along the interval (start, end).
+	- start and end are always included
+	- at least three positions are included
+	"""
+	l = end - start
+	n = l // PROBE_SPACING
+	spacing = l / max(n, 2)  # float division
+	i = 0
+	pos = start
+	while pos <= end:
+		yield pos
+		i += 1
+		pos = start + int(i * spacing)
 
 
 def format_comment(info: dict) -> str:
