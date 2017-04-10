@@ -5,6 +5,7 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 # We handle the following variant types:
 # DEL  Deletion: height -1
 # DUP  Duplication: height +1
+# TDUP Tandem duplication: height +1.5
 # IDUP Interspersed duplication: height +0.5
 # INV  Inversion: height -0.5
 #
@@ -12,7 +13,6 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 #
 # BND  Break end
 # INS  Insertion
-# TDUP Tandem duplication
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import sys
@@ -124,7 +124,7 @@ def parse_vcf(path):
 		chrom = variant.CHROM
 		start = variant.start
 		sv_type = variant.ALT[0][1:-1]
-		if sv_type in ('DEL', 'DUP', 'IDUP', 'INV'):
+		if sv_type in ('DEL', 'DUP', 'IDUP', 'TDUP', 'INV'):
 			end = variant.INFO.get('END')
 			assert start <= end
 			assert variant.INFO.get('SVTYPE') == sv_type
@@ -305,7 +305,7 @@ def main():
 	submission = tree.xpath('/data/cgh/submission')[0]
 
 	for event in parse_vcf(args.vcf):
-		height = {'DEL': -1.0, 'DUP': +1.0, 'IDUP': +0.5, 'INV': -0.5}[event.type]
+		height = {'DEL': -1.0, 'DUP': +1.0, 'TDUP': +1.5, 'IDUP': +0.5, 'INV': -0.5}[event.type]
 		make_segment(segmentation, event.chrom, event.start, event.end, height)
 
 		comment = format_comment(event.info)
