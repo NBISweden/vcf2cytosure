@@ -6,12 +6,14 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import sys
 import logging
+import math
 from collections import namedtuple, defaultdict
 from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
 PROBE_SPACING = 100000
+MAX_HEIGHT = 4
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +303,7 @@ def spaced_probes(start, end, probe_spacing=PROBE_SPACING):
 
 def triangle_probes(center, height=2.5, width=5001, steps=15):
 	"""
-	Yield probes that "draw" a triangular shape (pointing upwards)
+	Yield (pos, height) pairs that "draw" a triangular shape (pointing upwards)
 	"""
 	pos_step = (width - 1) // (steps - 1)
 	height_step = height / ((steps - 1) // 2)
@@ -340,6 +342,8 @@ def merge_intervals(intervals):
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__)
+	parser.add_argument('--coverage',
+		help='Coverage file')
 	parser.add_argument('vcf',
 		help="VCF file")
 	# parser.add_argument('xml', help='CytoSure design file')
@@ -370,20 +374,37 @@ def main():
 			for pos in spaced_probes(event.start, event.end - 1):
 				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 
-	def probes_between_events(chrom, start, end):
-		for pos in spaced_probes(start, end, probe_spacing=200000):
-			# CytoSure does not display probes at height=0.0
-			make_probe(probes, chrom, pos, pos + 60, 0.01, 'between events')
+	if args.coverage:
+		i = 0
+		for line in open(args.coverage):
+			if line.startswith('#'):
+				continue
+			i += 1
+			if i % 10 != 0:
+				continue
+			chrom, start, end, coverage, _ = line.split('\t')
+			start = int(start) + 1
+			end = int(end)
+			center = (end + start) // 2
+			coverage = float(coverage)
+			height = min(2 * coverage / 30 - 2, MAX_HEIGHT)  # FIXME hardcoded avg cov
+			make_probe(probes, chrom, center - 30, center + 30, height, 'coverage')
 
-	for chrom, intervals in chr_intervals.items():
-		if chrom not in CONTIG_LENGTHS:
-			continue
-		intervals = merge_intervals(intervals)
-		prev_end = 1
-		for start, end in intervals:
-			probes_between_events(chrom, prev_end, start - 1)
-			prev_end = end
-		probes_between_events(chrom, prev_end, CONTIG_LENGTHS[chrom])
+	else:
+		def probes_between_events(chrom, start, end):
+			for pos in spaced_probes(start, end, probe_spacing=200000):
+				# CytoSure does not display probes at height=0.0
+				make_probe(probes, chrom, pos, pos + 60, 0.01, 'between events')
+
+		for chrom, intervals in chr_intervals.items():
+			if chrom not in CONTIG_LENGTHS:
+				continue
+			intervals = merge_intervals(intervals)
+			prev_end = 1
+			for start, end in intervals:
+				probes_between_events(chrom, prev_end, start - 1)
+				prev_end = end
+			probes_between_events(chrom, prev_end, CONTIG_LENGTHS[chrom])
 
 	tree.write(sys.stdout.buffer, pretty_print=True)
 

@@ -21,9 +21,6 @@ The SVs are displayed in the following way.
 
 BND (Break end) variants are not supported.
 
-Evenly spaced probes with height 0.01 (height 0.0 would not be shown by
-CytoSure) are also generated for the areas between SVs.
-
 For each SV, an *aberration* record is also generated. The attributes are
 filled in the following way:
 
@@ -33,6 +30,16 @@ filled in the following way:
 * The *“Comment”* field contains all the INFO attributes that have not
   otherwise been used for one of the above fields.
 * The other attributes are set to some arbitrary, but constant value.
+
+If the `--coverage` option is used, probe heights will represent coverage.
+Probes are drawn at height 0 if the coverage corresponds to the average
+coverage, at +2 for double average coverage, and at -2 for no coverage.
+Coverages higher than four times the average coverage are clamped to
+a height of +4 and are not shown at their actual height.
+
+If the `--coverage` option is not used, evenly spaced probes with height 0.01
+(height 0.0 would not be shown by CytoSure) are generated for the areas between
+SVs.
 
 
 ## Notes on the file format
