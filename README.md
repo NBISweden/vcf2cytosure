@@ -29,6 +29,7 @@ filled in the following way:
   of occurrences in the reference population)
 * The *“Comment”* field contains all the INFO attributes that have not
   otherwise been used for one of the above fields.
+* The copyNumber field is set to the RankScore value from the VCF INFO field
 * The other attributes are set to some arbitrary, but constant value.
 
 If the `--coverage` option is used, probe heights will represent coverage.

@@ -235,13 +235,13 @@ def make_segment(parent, chromosome, start, end, height):
 		'numProbes': '100',
 		'start': str(start + 1),
 		'stop': str(end),
-		'average': '{:.3f}'.format(-height),  # CytoSure seems to invert the sign
+		'average': '{:.3f}'.format(-height),  # CytoSure inverts the sign
 	})
 	return segment
 
 
-def make_aberration(parent, chromosome, start, end, comment=None, method='VCF conversion',
-		confirmation=None, n_probes=0):
+def make_aberration(parent, chromosome, start, end, comment=None, method='converted from VCF',
+		confirmation=None, n_probes=0, copy_number=99):
 	"""
 	comment -- string
 	method -- short string
@@ -254,6 +254,7 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='VCF co
 		stop=str(end),
 		maxStart=str(start + 1),
 		maxStop=str(end),
+		copyNumber=str(copy_number),
 		initialClassification='Unclassified',
 		finalClassification='Unclassified',
 		inheritance='Not_tested',
@@ -266,7 +267,6 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='VCF co
 		# TODO fill in the following values with something sensible
 		automationLevel='1.0',
 		baseline='0.0',
-		copyNumber='99',
 		mosaicism='0.0',
 		gain='true',
 		inheritanceCoverage='0.0',
@@ -361,8 +361,9 @@ def main():
 		make_segment(segmentation, event.chrom, event.start, event.end, height)
 
 		comment = format_comment(event.info)
+		rank_score = int(event.info['RankScore'].partition(':')[2])
 		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type,
-			comment=comment, n_probes=event.info['OCC'])
+			comment=comment, n_probes=event.info['OCC'], copy_number=rank_score)
 
 		if event.type == 'INS':
 			for pos, height in triangle_probes(event.start):
