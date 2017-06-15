@@ -339,6 +339,29 @@ def merge_intervals(intervals):
 				yield (start, pos)
 
 
+def add_coverage_probes(probes, path):
+	"""
+	probes -- <probes> element
+	path -- path to tab-separated file with coverages
+	"""
+	i = 0
+	for line in open(args.coverage):
+		if line.startswith('#'):
+			continue
+		i += 1
+		#if i % 10 != 0:
+			#continue
+		chrom, start, end, coverage, _ = line.split('\t')
+		if chrom != '4':
+			continue
+		start = int(start) + 1
+		end = int(end)
+		center = (end + start) // 2
+		coverage = float(coverage)
+		height = min(2 * coverage / 30 - 2, MAX_HEIGHT)  # FIXME hardcoded avg cov
+		make_probe(probes, chrom, center - 30, center + 30, height, 'coverage')
+
+
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__)
@@ -376,21 +399,7 @@ def main():
 				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 
 	if args.coverage:
-		i = 0
-		for line in open(args.coverage):
-			if line.startswith('#'):
-				continue
-			i += 1
-			if i % 10 != 0:
-				continue
-			chrom, start, end, coverage, _ = line.split('\t')
-			start = int(start) + 1
-			end = int(end)
-			center = (end + start) // 2
-			coverage = float(coverage)
-			height = min(2 * coverage / 30 - 2, MAX_HEIGHT)  # FIXME hardcoded avg cov
-			make_probe(probes, chrom, center - 30, center + 30, height, 'coverage')
-
+		add_coverage_probes(probes, args.coverage)
 	else:
 		def probes_between_events(chrom, start, end):
 			for pos in spaced_probes(start, end, probe_spacing=200000):
