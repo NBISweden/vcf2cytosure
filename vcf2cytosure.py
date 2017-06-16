@@ -54,6 +54,7 @@ CONTIG_LENGTHS = {
 	'X':  155_270_560,
 	'Y':   59_373_566,
 }
+CHROM_RENAME = {'X': '23', 'Y': '24'}
 
 Event = namedtuple('Event', ['chrom', 'start', 'end', 'type', 'info'])
 
@@ -212,7 +213,7 @@ def make_probe(parent, chromosome, start, end, height, text):
 	probe = etree.SubElement(parent, 'probe')
 	probe.attrib.update({
 		'name': text,
-		'chromosome': chromosome,
+		'chromosome': CHROM_RENAME.get(chromosome, chromosome),
 		'start': str(start + 1),
 		'stop': str(end),
 		'normalized': '{:.3f}'.format(-height),
@@ -241,7 +242,7 @@ def make_probe(parent, chromosome, start, end, height, text):
 def make_segment(parent, chromosome, start, end, height):
 	segment = etree.SubElement(parent, 'segment')
 	segment.attrib.update({
-		'chrId': chromosome,
+		'chrId': CHROM_RENAME.get(chromosome, chromosome),
 		'numProbes': '100',
 		'start': str(start + 1),
 		'stop': str(end),
@@ -259,7 +260,7 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='conver
 	"""
 	aberration = etree.SubElement(parent, 'aberration')
 	aberration.attrib.update(dict(
-		chr=chromosome,
+		chr=CHROM_RENAME.get(chromosome, chromosome),
 		start=str(start + 1),
 		stop=str(end),
 		maxStart=str(start + 1),

@@ -70,3 +70,6 @@ SVs.
 
       <segment chrId="1" numProbes="10" start="7000" stop="1000000" average="-0.003"/>
 - Segments can overlap each other
+- Names "X" and "Y" are not used for the corresponding chromosomes. Instead,
+  the `X` chromosome is stored as `23`, they `Y` chromosome as `24` (in probes,
+  segments and aberrations).
