@@ -348,6 +348,31 @@ def merge_intervals(intervals):
 				yield (start, pos)
 
 
+def complement_intervals(intervals, chromosome_length):
+	"""
+	>>> list(complement_intervals([(0, 1), (3, 4), (18, 20)], 20))
+	[(1, 3), (4, 18)]
+	"""
+	prev_end = 0
+	for start, end in intervals:
+		if prev_end != start:
+			yield prev_end, start
+		prev_end = end
+	if prev_end != chromosome_length:
+		yield prev_end, chromosome_length
+
+
+def add_probes_between_events(probes, chr_intervals):
+	for chrom, intervals in chr_intervals.items():
+		if chrom not in CONTIG_LENGTHS:
+			continue
+		intervals = merge_intervals(intervals)
+		for start, end in complement_intervals(intervals, CONTIG_LENGTHS[chrom]):
+			for pos in spaced_probes(start, end, probe_spacing=200000):
+				# CytoSure does not display probes at height=0.0
+				make_probe(probes, chrom, pos, pos + 60, 0.01, 'between events')
+
+
 def add_coverage_probes(probes, path):
 	"""
 	probes -- <probes> element
@@ -411,20 +436,7 @@ def main():
 	if args.coverage:
 		add_coverage_probes(probes, args.coverage)
 	else:
-		def probes_between_events(chrom, start, end):
-			for pos in spaced_probes(start, end, probe_spacing=200000):
-				# CytoSure does not display probes at height=0.0
-				make_probe(probes, chrom, pos, pos + 60, 0.01, 'between events')
-
-		for chrom, intervals in chr_intervals.items():
-			if chrom not in CONTIG_LENGTHS:
-				continue
-			intervals = merge_intervals(intervals)
-			prev_end = 1
-			for start, end in intervals:
-				probes_between_events(chrom, prev_end, start - 1)
-				prev_end = end
-			probes_between_events(chrom, prev_end, CONTIG_LENGTHS[chrom])
+		add_probes_between_events(probes, chr_intervals)
 
 	tree.write(sys.stdout.buffer, pretty_print=True)
 
