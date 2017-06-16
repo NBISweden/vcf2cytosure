@@ -373,28 +373,58 @@ def add_probes_between_events(probes, chr_intervals):
 				make_probe(probes, chrom, pos, pos + 60, 0.01, 'between events')
 
 
+class CoverageRecord:
+	__slots__ = ('chrom', 'start', 'end', 'coverage')
+
+	def __init__(self, chrom, start, end, coverage):
+		self.chrom = chrom
+		self.start = start
+		self.end = end
+		self.coverage = coverage
+
+
+def parse_coverages(path):
+	with open(path) as f:
+		for line in f:
+			if line.startswith('#'):
+				continue
+			chrom, start, end, coverage, _ = line.split('\t')
+			start = int(start)
+			end = int(end)
+			coverage = float(coverage)
+			yield CoverageRecord(chrom, start, end, coverage)
+
+
+def compute_mean_coverage(path):
+	"""
+	Return mean coverage
+	"""
+	total = 0
+	n = 0
+	for record in parse_coverages(path):
+		total += record.coverage
+		n += 1
+	return total / n
+
+
 def add_coverage_probes(probes, path):
 	"""
 	probes -- <probes> element
 	path -- path to tab-separated file with coverages
 	"""
-	i = 0
-	for line in open(path):
-		if line.startswith('#'):
+	logger.info('Reading %r ...', path)
+	records = list(parse_coverages(path))
+	mean_coverage = sum(r.coverage for r in records) / len(records)
+	logger.info('Mean coverage is %.2f', mean_coverage)
+	for i, record in enumerate(records):
+		# TODO FIXME debug
+		if record.chrom != '4':
 			continue
-		i += 1
 		#if i % 10 != 0:
 			#continue
-		chrom, start, end, coverage, _ = line.split('\t')
-		# TODO FIXME debug
-		if chrom != '4':
-			continue
-		start = int(start)
-		end = int(end)
-		center = (end + start) // 2
-		coverage = float(coverage)
-		height = min(2 * coverage / 30 - 2, MAX_HEIGHT)  # FIXME hardcoded avg cov
-		make_probe(probes, chrom, center - 30, center + 30, height, 'coverage')
+		center = (record.end + record.start) // 2
+		height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
+		make_probe(probes, record.chrom, center - 30, center + 30, height, 'coverage')
 
 
 def main():
