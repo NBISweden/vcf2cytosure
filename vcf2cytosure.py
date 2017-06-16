@@ -123,8 +123,7 @@ CGH_TEMPLATE = """
 <aqf key="Percentage_Homozygosity" value="NaN"/>
 <aqf key="SD" value="0.111111"/>
 </qc>
-<probes>
-</probes>
+<probes></probes>
 <segmentation type="NORMALIZED"></segmentation>
 </cgh>
 </data>
