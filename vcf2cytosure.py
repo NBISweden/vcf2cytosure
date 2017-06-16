@@ -149,6 +149,8 @@ def parse_vcf(path):
 		if len(variant.ALT) != 1:
 			continue
 		chrom = variant.CHROM
+		if chrom not in CONTIG_LENGTHS:
+			continue
 		start = variant.start
 		sv_type = variant.INFO.get('SVTYPE')
 		if sv_type in ('DEL', 'DUP', 'IDUP', 'TDUP', 'INV', 'INS'):
@@ -412,7 +414,7 @@ def add_coverage_probes(probes, path):
 	path -- path to tab-separated file with coverages
 	"""
 	logger.info('Reading %r ...', path)
-	records = list(parse_coverages(path))
+	records = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
 	mean_coverage = sum(r.coverage for r in records) / len(records)
 	logger.info('Mean coverage is %.2f', mean_coverage)
 
