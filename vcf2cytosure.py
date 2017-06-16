@@ -416,15 +416,33 @@ def add_coverage_probes(probes, path):
 	records = list(parse_coverages(path))
 	mean_coverage = sum(r.coverage for r in records) / len(records)
 	logger.info('Mean coverage is %.2f', mean_coverage)
+
+	n = 0
+	c = 0
+	coverage_sum = 0
+	prev_chrom = None
+	prev_end = 0
 	for i, record in enumerate(records):
-		# TODO FIXME debug
-		if record.chrom != '4':
-			continue
-		#if i % 10 != 0:
+		#TODO FIXME debug
+		#if record.chrom != '4':
 			#continue
-		center = (record.end + record.start) // 2
-		height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
-		make_probe(probes, record.chrom, center - 30, center + 30, height, 'coverage')
+		if c == 20 or prev_chrom != record.chrom:
+			if prev_chrom is not None:
+				# Emit a probe
+				height = min(2 * coverage_sum / c / mean_coverage - 2, MAX_HEIGHT)
+				#height = int(height * 4) / 4
+				if height == 0.0:
+					height = 0.01
+				make_probe(probes, prev_chrom, start, prev_end, height, 'coverage')
+			n += 1
+			start = record.start
+			coverage_sum = 0
+			c = 0
+		coverage_sum += record.coverage
+		c += 1
+		prev_end = record.end
+		prev_chrom = record.chrom
+	logger.info('Added %s coverage probes', n)
 
 
 def main():
