@@ -379,16 +379,17 @@ def add_coverage_probes(probes, path):
 	path -- path to tab-separated file with coverages
 	"""
 	i = 0
-	for line in open(args.coverage):
+	for line in open(path):
 		if line.startswith('#'):
 			continue
 		i += 1
 		#if i % 10 != 0:
 			#continue
 		chrom, start, end, coverage, _ = line.split('\t')
+		# TODO FIXME debug
 		if chrom != '4':
 			continue
-		start = int(start) + 1
+		start = int(start)
 		end = int(end)
 		center = (end + start) // 2
 		coverage = float(coverage)
