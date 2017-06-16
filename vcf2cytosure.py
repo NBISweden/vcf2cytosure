@@ -12,10 +12,19 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
+logger = logging.getLogger(__name__)
+
 PROBE_SPACING = 100000
 MAX_HEIGHT = 4
-
-logger = logging.getLogger(__name__)
+ABERRATION_HEIGHTS = {
+	'DEL': -1.0,
+	'DUP': +1.0,
+	'TDUP': +1.5,
+	'IDUP': +0.5,
+	'INV': -0.5,
+	'INS': -1.5,
+	'BND': -2.0,
+}
 
 
 # GRCh37
@@ -152,10 +161,10 @@ def parse_vcf(path):
 			assert len(variant.REF) == 1
 
 			yield Event(chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO))
-		#elif vtype == 'BND':  # Breakend
+		elif sv_type == 'BND':  # Breakend
+			logger.info('%s at %s:%s', sv_type, chrom, start+1)
 			#print(variant.orientation, variant.chr, variant.connectingSequence, variant.pos, variant.remoteOrientation, variant.withinMainAssembly)
-			#assert r.INFO.get('SVTYPE') == 'BND'
-			#break
+			yield Event(chrom=chrom, start=start, end=None, type='BND', info=dict(variant.INFO))
 		#else:
 			##print(dir(variant))
 			#keys = frozenset(['END', 'IMPRECISE', 'SVTYPE', 'SVLEN'])
@@ -380,17 +389,18 @@ def main():
 
 	chr_intervals = defaultdict(list)
 	for event in parse_vcf(args.vcf):
-		height = {'DEL': -1.0, 'DUP': +1.0, 'TDUP': +1.5, 'IDUP': +0.5, 'INV': -0.5, 'INS': -1.5}[event.type]
-		make_segment(segmentation, event.chrom, event.start, event.end, height)
-
+		height = ABERRATION_HEIGHTS[event.type]
+		end = event.start + 1000 if event.type in ('INS', 'BND') else event.end
+		make_segment(segmentation, event.chrom, event.start, end, height)
 		comment = format_comment(event.info)
 		rank_score = int(event.info['RankScore'].partition(':')[2])
-		make_aberration(submission, event.chrom, event.start, event.end, confirmation=event.type,
+		make_aberration(submission, event.chrom, event.start, end, confirmation=event.type,
 			comment=comment, n_probes=event.info['OCC'], copy_number=rank_score)
 
-		if event.type == 'INS':
+		if event.type in ('INS', 'BND'):
+			sign = +1 if event.type == 'INS' else -1
 			for pos, height in triangle_probes(event.start):
-				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
+				make_probe(probes, event.chrom, pos, pos + 60, sign * height, event.type)
 		else:
 			chr_intervals[event.chrom].append((event.start, event.end))
 			# show probes at slightly different height than segments

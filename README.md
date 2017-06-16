@@ -18,8 +18,7 @@ The SVs are displayed in the following way.
 * *IDUP* (Interspersed duplication): Probes at height +0.5
 * *INV* (Inversion): Probes at height -0.5
 * *INS* (Insertion): Shown as an upwards-pointing "triangle" of 15 probes
-
-BND (Break end) variants are not supported.
+* *BND* (Break end): Downwards-pointing triangle
 
 For each SV, an *aberration* record is also generated. The attributes are
 filled in the following way:
