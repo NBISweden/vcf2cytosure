@@ -145,8 +145,9 @@ class HelpfulArgumentParser(ArgumentParser):
 		self.exit(2, '%(prog)s: error: %(message)s\n' % args)
 
 
-def parse_vcf(path):
-	for variant in VCF(path):
+def events(variants):
+	"""Iterate over variants and yield Events"""
+	for variant in variants:
 		if len(variant.ALT) != 1:
 			continue
 		chrom = variant.CHROM
@@ -447,13 +448,69 @@ def add_coverage_probes(probes, path):
 	logger.info('Added %s coverage probes', n)
 
 
+def variant_filter(variants, min_size=5000, min_tiddit_support=8, min_nator_rd=0.3,
+		max_frequency=0.01, frequency_tag='FRQ'):
+
+	for variant in variants:
+		is_tiddit = variant.INFO.get('WINA') is not None and variant.INFO.get('WINB') is not None
+
+		# Ignore second BND of a variant
+		if is_tiddit and not variant.ID.endswith('_1'):
+			continue
+
+		end = variant.INFO.get('END')
+		if end is not None:
+			if abs(end - variant.pos) <= min_size:
+				# Too short
+				continue
+		else:
+			assert variant.INFO.get('SVTYPE') == 'BND'
+			# ALT is something like 'N[X:5570681['
+			assert variant.ALT[0].startswith('N[') and variant.ALT[0].endswith('[')
+			bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
+			if is_tiddit and bnd_chrom == variant.chrom and abs(bnd_pos - variant.pos) < min_size:
+				continue
+		frequency = variant.INFO.get(frequency_tag)
+		if frequency is not None and frequency > max_frequency:
+			continue
+
+		# LTE: links to event; SR: Number of split reads that support the event
+		support = variant.INFO.get('LTE', 0) + variant.INFO.get('SR', 0)
+		tiddit_support_ok = is_tiddit and support >= min_tiddit_support
+
+		nator_rd = variant.INFO.get('natorRD')
+		cnvnator_support_ok = nator_rd is not None and abs(nator_rd) >= min_nator_rd
+
+		# Discard variant if only one of CNVnator and Tiddit have called it
+		# *and* the support by that caller is too low
+		if is_tiddit and not nator_rd and not tiddit_support_ok:
+			continue
+		if nator_rd and not is_tiddit and not cnvnator_support_ok:
+			continue
+		# If none or both of them have called it, keep the variant no matter the support.
+
+		yield variant
+
+
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__)
+	parser.add_argument('--size', default=5000, type=int,
+		help='Minimum variant size. Default: %(default)s')
+	parser.add_argument('--tiddit-support', default=8, type=int,
+		metavar='SUPPORT',
+		help='Remove variants that are called only by TIDDIT and whose support '
+		     'is lower than SUPPORT. Default: %(default)s')
+	parser.add_argument('--nator-rd', default=0.3, type=float,
+		help='Minimum CNVnator normalised RD deviation. Default: %(default)s')
+	parser.add_argument('--frequency', default=0.01, type=float,
+		help='Maximum frequency. Default: %(default)s')
+	parser.add_argument('--frequency_tag', default='FRQ', type=str,
+		help='Frequency tag of the info field. Default: %(default)s')
 	parser.add_argument('--coverage',
 		help='Coverage file')
 	parser.add_argument('vcf',
-		help="VCF file")
+		help='VCF file')
 	# parser.add_argument('xml', help='CytoSure design file')
 	args = parser.parse_args()
 
@@ -464,7 +521,14 @@ def main():
 	submission = tree.xpath('/data/cgh/submission')[0]
 
 	chr_intervals = defaultdict(list)
-	for event in parse_vcf(args.vcf):
+	filtered_vcf = variant_filter(VCF(args.vcf),
+		min_size=args.size,
+		min_tiddit_support=args.tiddit_support,
+		min_nator_rd=args.nator_rd,
+		max_frequency=args.frequency,
+		frequency_tag=args.frequency_tag,
+	)
+	for event in events(filtered_vcf):
 		height = ABERRATION_HEIGHTS[event.type]
 		end = event.start + 1000 if event.type in ('INS', 'BND') else event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
