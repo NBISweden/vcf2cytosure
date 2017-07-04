@@ -160,12 +160,12 @@ def events(variants):
 			assert start <= end
 			if sv_type not in ('IDUP', 'INS'):
 				assert sv_type == variant.ALT[0][1:-1]  # <DUP> etc.
-			logger.info('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
+			logger.debug('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
 			assert len(variant.REF) == 1
 
 			yield Event(chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO))
 		elif sv_type == 'BND':  # Breakend
-			logger.info('%s at %s:%s', sv_type, chrom, start+1)
+			logger.debug('%s at %s:%s', sv_type, chrom, start+1)
 			#print(variant.orientation, variant.chr, variant.connectingSequence, variant.pos, variant.remoteOrientation, variant.withinMainAssembly)
 			yield Event(chrom=chrom, start=start, end=None, type='BND', info=dict(variant.INFO))
 		#else:
@@ -496,21 +496,28 @@ def variant_filter(variants, min_size=5000, min_tiddit_support=8, min_nator_rd=0
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = HelpfulArgumentParser(description=__doc__)
-	parser.add_argument('--size', default=5000, type=int,
+
+	group = parser.add_argument_group('Filtering')
+	group.add_argument('--size', default=5000, type=int,
 		help='Minimum variant size. Default: %(default)s')
-	parser.add_argument('--tiddit-support', default=8, type=int,
+	group.add_argument('--tiddit-support', default=8, type=int,
 		metavar='SUPPORT',
 		help='Remove variants that are called only by TIDDIT and whose support '
 		     'is lower than SUPPORT. Default: %(default)s')
-	parser.add_argument('--nator-rd', default=0.3, type=float,
+	group.add_argument('--nator-rd', default=0.3, type=float,
 		help='Minimum CNVnator normalised RD deviation. Default: %(default)s')
-	parser.add_argument('--frequency', default=0.01, type=float,
+	group.add_argument('--frequency', default=0.01, type=float,
 		help='Maximum frequency. Default: %(default)s')
-	parser.add_argument('--frequency_tag', default='FRQ', type=str,
+	group.add_argument('--frequency_tag', default='FRQ', type=str,
 		help='Frequency tag of the info field. Default: %(default)s')
-	parser.add_argument('--coverage',
+	group.add_argument('--no-filter', dest='do_filtering', action='store_false',
+		default=True,
+		help='Disable any filtering')
+
+	group = parser.add_argument_group('Input')
+	group.add_argument('--coverage',
 		help='Coverage file')
-	parser.add_argument('vcf',
+	group.add_argument('vcf',
 		help='VCF file')
 	# parser.add_argument('xml', help='CytoSure design file')
 	args = parser.parse_args()
@@ -522,14 +529,17 @@ def main():
 	submission = tree.xpath('/data/cgh/submission')[0]
 
 	chr_intervals = defaultdict(list)
-	filtered_vcf = variant_filter(VCF(args.vcf),
-		min_size=args.size,
-		min_tiddit_support=args.tiddit_support,
-		min_nator_rd=args.nator_rd,
-		max_frequency=args.frequency,
-		frequency_tag=args.frequency_tag,
-	)
-	for event in events(filtered_vcf):
+	vcf = VCF(args.vcf)
+	if args.do_filtering:
+		vcf = variant_filter(vcf,
+			min_size=args.size,
+			min_tiddit_support=args.tiddit_support,
+			min_nator_rd=args.nator_rd,
+			max_frequency=args.frequency,
+			frequency_tag=args.frequency_tag,
+		)
+	n = 0
+	for event in events(vcf):
 		height = ABERRATION_HEIGHTS[event.type]
 		end = event.start + 1000 if event.type in ('INS', 'BND') else event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
@@ -548,14 +558,14 @@ def main():
 			height *= 1.05
 			for pos in spaced_probes(event.start, event.end - 1):
 				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
-
+		n += 1
 	if args.coverage:
 		add_coverage_probes(probes, args.coverage)
 	else:
 		add_probes_between_events(probes, chr_intervals)
 
 	tree.write(sys.stdout.buffer, pretty_print=True)
-
+	logger.info('Wrote %d variants to CGH', n)
 
 if __name__ == '__main__':
 	main()
