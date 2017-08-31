@@ -760,37 +760,77 @@ def compute_mean_coverage(path):
 	return total / n
 
 
+def group_by_chromosome(records):
+	"""
+	Group records by their .chrom attribute.
+
+	Yield pairs (chromosome, list_of_records) where list_of_records
+	are the consecutive records sharing the same chromosome.
+	"""
+	prev_chrom = None
+	chromosome_records = []
+	for record in records:
+		if record.chrom != prev_chrom:
+			if chromosome_records:
+				yield prev_chrom, chromosome_records
+				chromosome_records = []
+		chromosome_records.append(record)
+		prev_chrom = record.chrom
+	if chromosome_records:
+		yield prev_chrom, chromosome_records
+
+
+def bin_coverages(coverages, n=20):
+	"""
+	Reduce the number of coverage records by re-binning
+	each *n* coverage values into a new single bin.
+
+	The coverages are assumed to be from a single chromosome.
+	"""
+	chrom = coverages[0].chrom
+	for i in range(0, len(coverages), n):
+		records = coverages[i:i+n]
+		cov = sum(r.coverage for r in records) / len(records)
+		yield CoverageRecord(chrom,	records[0].start, records[-1].end, cov)
+
+
+def subtract_intervals(records, intervals):
+	"""
+	Yield only those records that fall outside of the given intervals.
+	"""
+	events = [(r.start, 'rec', r) for r in records]
+	events.extend((i[0], 'istart', None) for i in intervals)
+	events.extend((i[1], 'iend', None) for i in intervals)
+	events.sort()
+	inside = False
+	for pos, typ, record in events:
+		if typ == 'istart':
+			inside = True
+		elif typ == 'iend':
+			inside = False
+		elif not inside:
+			yield record
+
+
 def add_coverage_probes(probes, path):
 	"""
 	probes -- <probes> element
 	path -- path to tab-separated file with coverages
 	"""
 	logger.info('Reading %r ...', path)
-	records = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
-	mean_coverage = sum(r.coverage for r in records) / len(records)
+	coverages = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
+	mean_coverage = sum(r.coverage for r in coverages) / len(coverages)
 	logger.info('Mean coverage is %.2f', mean_coverage)
 
 	n = 0
-	c = 0
-	coverage_sum = 0
-	prev_chrom = None
-	prev_end = 0
-	for i, record in enumerate(records):
-		if c == 20 or prev_chrom != record.chrom:
-			if prev_chrom is not None:
-				# Emit a probe
-				height = min(2 * coverage_sum / c / mean_coverage - 2, MAX_HEIGHT)
-				if height == 0.0:
-					height = 0.01
-				make_probe(probes, prev_chrom, start, prev_end, height, 'coverage')
+	for chromosome, records in group_by_chromosome(coverages):
+		n_intervals = N_INTERVALS[chromosome]
+		for record in subtract_intervals(bin_coverages(records), n_intervals):
+			height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
+			if height == 0.0:
+				height = 0.01
+			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
 			n += 1
-			start = record.start
-			coverage_sum = 0
-			c = 0
-		coverage_sum += record.coverage
-		c += 1
-		prev_end = record.end
-		prev_chrom = record.chrom
 	logger.info('Added %s coverage probes', n)
 
 
@@ -912,6 +952,7 @@ def main():
 
 	tree.write(sys.stdout.buffer, pretty_print=True)
 	logger.info('Wrote %d variants to CGH', n)
+
 
 if __name__ == '__main__':
 	main()
