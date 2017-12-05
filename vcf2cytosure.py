@@ -3,7 +3,7 @@
 Convert structural variants in a VCF to CGH (CytoSure) format
 """
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+import argparse
 import sys
 import logging
 import math
@@ -29,30 +29,30 @@ ABERRATION_HEIGHTS = {
 # Hard-coded data about GRCh37 follows.
 # Whenever GRCh38 becomes relevant, use external .fai and .bed files instead.
 CONTIG_LENGTHS = {
-	'1':  249_250_621,
-	'2':  243_199_373,
-	'3':  198_022_430,
-	'4':  191_154_276,
-	'5':  180_915_260,
-	'6':  171_115_067,
-	'7':  159_138_663,
-	'8':  146_364_022,
-	'9':  141_213_431,
-	'10': 135_534_747,
-	'11': 135_006_516,
-	'12': 133_851_895,
-	'13': 115_169_878,
-	'14': 107_349_540,
-	'15': 102_531_392,
-	'16':  90_354_753,
-	'17':  81_195_210,
-	'18':  78_077_248,
-	'19':  59_128_983,
-	'20':  63_025_520,
-	'21':  48_129_895,
-	'22':  51_304_566,
-	'X':  155_270_560,
-	'Y':   59_373_566,
+	'1':  249250621,
+	'2':  243199373,
+	'3':  198022430,
+	'4':  191154276,
+	'5':  180915260,
+	'6':  171115067,
+	'7':  159138663,
+	'8':  146364022,
+	'9':  141213431,
+	'10': 135534747,
+	'11': 135006516,
+	'12': 133851895,
+	'13': 115169878,
+	'14': 107349540,
+	'15': 102531392,
+	'16':  90354753,
+	'17':  81195210,
+	'18':  78077248,
+	'19':  59128983,
+	'20':  63025520,
+	'21':  48129895,
+	'22':  51304566,
+	'X':  155270560,
+	'Y':   59373566,
 }
 # Intervals at which the reference contains N bases
 N_INTERVALS = {
@@ -407,7 +407,7 @@ CHROM_RENAME = {'X': '23', 'Y': '24'}
 
 Event = namedtuple('Event', ['chrom', 'start', 'end', 'type', 'info'])
 
-CGH_TEMPLATE = """
+CGH_TEMPLATE = u"""
 <data formatVersion="2">
 <pgdData><pgdDataEntry key="SPECIMEN_TYPE" value="BLASTOMERE"/></pgdData>
 <noResults>
@@ -479,21 +479,6 @@ CGH_TEMPLATE = """
 </data>
 """
 
-
-class HelpfulArgumentParser(ArgumentParser):
-	"""An ArgumentParser that prints full help on errors."""
-
-	def __init__(self, *args, **kwargs):
-		if 'formatter_class' not in kwargs:
-			kwargs['formatter_class'] = RawDescriptionHelpFormatter
-		super().__init__(*args, **kwargs)
-
-	def error(self, message):
-		self.print_help(sys.stderr)
-		args = {'prog': self.prog, 'message': message}
-		self.exit(2, '%(prog)s: error: %(message)s\n' % args)
-
-
 def events(variants):
 	"""Iterate over variants and yield Events"""
 
@@ -505,31 +490,24 @@ def events(variants):
 			continue
 		start = variant.start
 		sv_type = variant.INFO.get('SVTYPE')
-		if sv_type in ('DEL', 'DUP', 'IDUP', 'TDUP', 'INV', 'INS'):
+		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
-			assert start <= end
-			if sv_type not in ('IDUP', 'INS'):
-				assert sv_type == variant.ALT[0][1:-1]  # <DUP> etc.
+			if start <= end:
+				tmp=end
+				end=start
+				start=tmp
+
 			logger.debug('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
 			assert len(variant.REF) == 1
 
 			yield Event(chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO))
-		elif sv_type == 'BND':  # Breakend
+		else:
 			logger.debug('%s at %s:%s', sv_type, chrom, start+1)
-			#print(variant.orientation, variant.chr, variant.connectingSequence, variant.pos, variant.remoteOrientation, variant.withinMainAssembly)
-			yield Event(chrom=chrom, start=start, end=None, type='BND', info=dict(variant.INFO))
-		#else:
-			##print(dir(variant))
-			#keys = frozenset(['END', 'IMPRECISE', 'SVTYPE', 'SVLEN'])
-			#print({k:variant.INFO.get(k) for k in keys})
-			#if variant.INFO.get('SVTYPE') != vtype:
-				#print(variant, vtype)
-				#assert False
-
+			yield Event( chrom=chrom, start=start, end=None, type=sv_type, info=dict(variant.INFO) )
 
 def strip_template(path):
 	"""
-	Read in the template CGH file and strip it of everything that we don’t need.
+	Read in the template CGH file and strip it of everything that we don't need.
 
 	Return the lxml.etree object.
 	"""
@@ -673,7 +651,7 @@ def triangle_probes(center, height=2.5, width=5001, steps=15):
 		yield center + i * pos_step, height - height_step * abs(i) + 0.1
 
 
-def format_comment(info: dict) -> str:
+def format_comment(info):
 	comment = ''
 	for k, v in sorted(info.items()):
 		if k in ('CSQ', 'SVTYPE'):
@@ -834,64 +812,37 @@ def add_coverage_probes(probes, path):
 	logger.info('Added %s coverage probes', n)
 
 
-def variant_filter(variants, min_size=5000, min_tiddit_support=8, min_nator_rd=0.3,
-		max_frequency=0.01, frequency_tag='FRQ'):
+def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FRQ'):
 
 	for variant in variants:
-		is_tiddit = variant.INFO.get('WINA') is not None and variant.INFO.get('WINB') is not None
-
-		# Ignore second BND of a variant
-		if is_tiddit and not variant.ID.endswith('_1'):
-			continue
 
 		end = variant.INFO.get('END')
-		if end is not None:
+		if end:
 			if abs(end - variant.start) <= min_size:
 				# Too short
 				continue
-		else:
-			assert variant.INFO.get('SVTYPE') == 'BND'
-			# ALT is something like 'N[X:5570681['
-			assert variant.ALT[0].startswith('N[') and variant.ALT[0].endswith('[')
+		elif variant.INFO.get('SVTYPE') == 'BND':
 			bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
-			bnd_pos = int(bnd_pos)
-			if is_tiddit and bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
+
+			bnd_pos = int(variant.ALT[0].split(':')[1].split("]")[0].split("[")[0])
+			bnd_chrom= variant.ALT[0].split(':')[0].split("]")[-1].split("[")[-1]
+
+			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
+
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
 			continue
 
-		# LTE: links to event; SR: Number of split reads that support the event
-		support = variant.INFO.get('LTE', 0) + variant.INFO.get('SR', 0)
-		tiddit_support_ok = is_tiddit and support >= min_tiddit_support
-
-		nator_rd = variant.INFO.get('natorRD')
-		cnvnator_support_ok = nator_rd is not None and abs(nator_rd - 1) >= min_nator_rd
-
-		# Discard variant if only one of CNVnator and Tiddit have called it
-		# *and* the support by that caller is too low
-		if is_tiddit and not nator_rd and not tiddit_support_ok:
-			continue
-		if nator_rd and not is_tiddit and not cnvnator_support_ok:
-			continue
-		# If none or both of them have called it, keep the variant no matter the support.
-
 		yield variant
-
 
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-	parser = HelpfulArgumentParser(description=__doc__)
+	parser = argparse.ArgumentParser("VCF2cytosure - convert SV vcf files to cytosure")
 
 	group = parser.add_argument_group('Filtering')
 	group.add_argument('--size', default=5000, type=int,
 		help='Minimum variant size. Default: %(default)s')
-	group.add_argument('--tiddit-support', default=8, type=int,
-		metavar='SUPPORT',
-		help='Remove variants that are called only by TIDDIT and whose support '
-		     'is lower than SUPPORT. Default: %(default)s')
-	group.add_argument('--nator-rd', default=0.3, type=float,
-		help='Minimum CNVnator normalised RD deviation. Default: %(default)s')
 	group.add_argument('--frequency', default=0.01, type=float,
 		help='Maximum frequency. Default: %(default)s')
 	group.add_argument('--frequency_tag', default='FRQ', type=str,
@@ -903,11 +854,13 @@ def main():
 	group = parser.add_argument_group('Input')
 	group.add_argument('--coverage',
 		help='Coverage file')
-	group.add_argument('vcf',
-		help='VCF file')
+	group.add_argument('--vcf',help='VCF file')
+	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 	# parser.add_argument('xml', help='CytoSure design file')
-	args = parser.parse_args()
+	args= parser.parse_args()
 
+	if not args.out:
+		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
 	tree = etree.parse(StringIO(CGH_TEMPLATE), parser)
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
@@ -917,22 +870,24 @@ def main():
 	chr_intervals = defaultdict(list)
 	vcf = VCF(args.vcf)
 	if args.do_filtering:
-		vcf = variant_filter(vcf,
-			min_size=args.size,
-			min_tiddit_support=args.tiddit_support,
-			min_nator_rd=args.nator_rd,
-			max_frequency=args.frequency,
-			frequency_tag=args.frequency_tag,
-		)
+		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag,)
 	n = 0
 	for event in events(vcf):
 		height = ABERRATION_HEIGHTS[event.type]
 		end = event.start + 1000 if event.type in ('INS', 'BND') else event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
 		comment = format_comment(event.info)
-		rank_score = int(event.info['RankScore'].partition(':')[2])
+		if "rankScore" in event.info:
+			rank_score = int(event.info['RankScore'].partition(':')[2])
+		else:
+			rank_score =0
+
+		occ=0
+		if "OCC" in event.info:
+			occ=event.info['OCC']
+
 		make_aberration(submission, event.chrom, event.start, end, confirmation=event.type,
-			comment=comment, n_probes=event.info['OCC'], copy_number=rank_score)
+			comment=comment, n_probes=occ, copy_number=rank_score)
 
 		if event.type in ('INS', 'BND'):
 			sign = +1 if event.type == 'INS' else -1
@@ -950,7 +905,7 @@ def main():
 	else:
 		add_probes_between_events(probes, chr_intervals)
 
-	tree.write(sys.stdout.buffer, pretty_print=True)
+	tree.write(args.out, pretty_print=True)
 	logger.info('Wrote %d variants to CGH', n)
 
 
