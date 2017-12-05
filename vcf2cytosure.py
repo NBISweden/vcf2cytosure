@@ -870,7 +870,7 @@ def main():
 	chr_intervals = defaultdict(list)
 	vcf = VCF(args.vcf)
 	if args.do_filtering:
-		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag,)
+		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
 	n = 0
 	for event in events(vcf):
 		height = ABERRATION_HEIGHTS[event.type]
