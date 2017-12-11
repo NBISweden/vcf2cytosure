@@ -864,10 +864,6 @@ def main():
 	# parser.add_argument('xml', help='CytoSure design file')
 	args= parser.parse_args()
 
-	if args.version:
-		print(__version__)
-		exit
-
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
