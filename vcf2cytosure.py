@@ -12,6 +12,8 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
+__version__ = '0.2.0'
+
 logger = logging.getLogger(__name__)
 
 PROBE_SPACING = 100000
@@ -856,6 +858,9 @@ def main():
 		help='Coverage file')
 	group.add_argument('--vcf',help='VCF file')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
+
+	group.add_argument('-V','--version',action='version',version="%(prog)s "+__version__ ,
+			   help='Print program version and exit.')
 	# parser.add_argument('xml', help='CytoSure design file')
 	args= parser.parse_args()
 
