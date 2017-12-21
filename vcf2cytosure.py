@@ -26,6 +26,7 @@ ABERRATION_HEIGHTS = {
 	'INV': -0.5,
 	'INS': -1.5,
 	'BND': -2.0,
+	'TRA': -2.0,
 }
 
 # Hard-coded data about GRCh37 follows.
@@ -819,10 +820,12 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 	for variant in variants:
 
 		end = variant.INFO.get('END')
-		if end:
+		if end and not variant.INFO.get('SVTYPE') == 'TRA':
+
 			if abs(end - variant.start) <= min_size:
 				# Too short
 				continue
+
 		elif variant.INFO.get('SVTYPE') == 'BND':
 			bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
 
@@ -831,6 +834,11 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
+
+		elif variant.INFO.get('SVTYPE') == 'TRA':
+
+			bnd_pos = variant.INFO.get('END')
+			bnd_chrom =variant.INFO.get('CHR2');
 
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
