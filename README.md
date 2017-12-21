@@ -26,7 +26,8 @@ The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TID
 
     TIDDIT --cov -b <input.bam> -o <coverage_pefix>
 
-##Structural variants
+
+## Structural variants
 Structural variant (SV) types DEL, DUP, TDUP, IDUP, INV, and INS are supported.
 For each SVs, at least three probes are generated. If the SV is large enough,
 then more probes are generated that are spaced 100 kbp apart.
