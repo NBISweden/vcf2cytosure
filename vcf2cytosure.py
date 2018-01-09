@@ -12,7 +12,7 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ ABERRATION_HEIGHTS = {
 	'INV': -0.5,
 	'INS': -1.5,
 	'BND': -2.0,
+	'TRA': -2.0,
 }
 
 # Hard-coded data about GRCh37 follows.
@@ -819,10 +820,12 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 	for variant in variants:
 
 		end = variant.INFO.get('END')
-		if end:
+		if end and not variant.INFO.get('SVTYPE') == 'TRA':
+
 			if abs(end - variant.start) <= min_size:
 				# Too short
 				continue
+
 		elif variant.INFO.get('SVTYPE') == 'BND':
 			bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
 
@@ -831,6 +834,11 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
+
+		elif variant.INFO.get('SVTYPE') == 'TRA':
+
+			bnd_pos = variant.INFO.get('END')
+			bnd_chrom =variant.INFO.get('CHR2');
 
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
@@ -856,7 +864,7 @@ def main():
 	group = parser.add_argument_group('Input')
 	group.add_argument('--coverage',
 		help='Coverage file')
-	group.add_argument('--vcf',help='VCF file')
+	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 
 	group.add_argument('-V','--version',action='version',version="%(prog)s "+__version__ ,

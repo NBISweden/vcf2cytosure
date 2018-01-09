@@ -6,6 +6,28 @@ commercial
 by OGT (Oxford Gene Technology). CytoSure is made for displaying oligo array measurements.
 It works on a set of probes, which this tool emulates. 
 
+## Usage
+Cytosure requires an input vcf file. Optionally, a coverage bed file could be used to visualise the coverage across the genome.
+
+    INSTALL:
+        git  clone https://github.com/NBISweden/vcf2cytosure.git
+        cd vcf2cytosure
+        pip install -e .
+
+    RUNNING:
+        
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh>
+    
+    optionally
+
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --coverge <overage.bed>
+
+The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TIDDIT)
+
+    TIDDIT --cov -b <input.bam> -o <coverage_pefix>
+
+
+## Structural variants
 Structural variant (SV) types DEL, DUP, TDUP, IDUP, INV, and INS are supported.
 For each SVs, at least three probes are generated. If the SV is large enough,
 then more probes are generated that are spaced 100 kbp apart.
@@ -40,6 +62,7 @@ a height of +4 and are not shown at their actual height.
 If the `--coverage` option is not used, evenly spaced probes with height 0.01
 (height 0.0 would not be shown by CytoSure) are generated for the areas between
 SVs.
+
 
 
 ## Notes on the file format
