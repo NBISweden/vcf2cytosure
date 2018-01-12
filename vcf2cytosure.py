@@ -14,7 +14,7 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 
 logger = logging.getLogger(__name__)
 
