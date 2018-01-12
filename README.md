@@ -7,7 +7,7 @@ by OGT (Oxford Gene Technology). CytoSure is made for displaying oligo array mea
 It works on a set of probes, which this tool emulates. 
 
 ## Usage
-Cytosure requires an input vcf file. Optionally, a coverage bed file could be used to visualise the coverage across the genome.
+Cytosure requires an input vcf file. Optionally, a coverage bed or snp vcf file could be used to visualise the coverage across the genome.
 
     INSTALL:
         git  clone https://github.com/NBISweden/vcf2cytosure.git
@@ -21,6 +21,10 @@ Cytosure requires an input vcf file. Optionally, a coverage bed file could be us
     optionally
 
     vcf2cytosure --vcf <input.vcf> --out <output.cgh> --coverge <overage.bed>
+
+    or:
+
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf>
 
 The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TIDDIT)
 
