@@ -30,6 +30,12 @@ The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TID
 
     TIDDIT --cov -b <input.bam> -o <coverage_pefix>
 
+The binning of the input coverage file may be controlled using the --bins parameter:
+
+	vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf> --bins 50
+
+Here 50 coverage bins will be pooled into one probe. The number of probes affect the amount of detail and resolution in the analysis.
+A large number of probes will make cytosure sluggish.
 
 ## Structural variants
 Structural variant (SV) types DEL, DUP, TDUP, IDUP, INV, and INS are supported.

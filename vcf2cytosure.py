@@ -421,7 +421,7 @@ CGH_TEMPLATE = u"""
 <cgh mother="-1" father="-1" genomeBuild="hg19" softwareVersion="4.8.32" batched="false">
   <submission design="031035" feFile="dummy.txt" cghFile="dummy.cgh" scanDate="1462520414000" barcode="253103511677_1_3" sampleCy3="true">
   <notes/>
-  <sample sampleId="2016-08276" male="false"><phenotype/></sample>
+  <sample sampleId="{}" male="false"><phenotype/></sample>
   <reference sampleId="Promega Female" male="false"><phenotype/></reference>
   <extra>
     <datum category="Nanodrop" type="Sample DNA (ng)" dataType="Float"/>
@@ -498,10 +498,10 @@ def events(variants):
 		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
 			if start <= end:
-				tmp=end
+				tmp=int(end)
 				end=start
 				start=tmp
-
+			
 			logger.debug('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
 			assert len(variant.REF) == 1
 
@@ -724,7 +724,11 @@ def parse_coverages(path):
 		for line in f:
 			if line.startswith('#'):
 				continue
-			chrom, start, end, coverage, _ = line.split('\t')
+			content=line.split('\t')
+			chrom=content[0]
+			start=content[1]
+			end=content[2]
+			coverage=content[3] 
 			start = int(start)
 			end = int(end)
 			coverage = float(coverage)
@@ -784,7 +788,7 @@ def group_by_chromosome(records):
 		yield prev_chrom, chromosome_records
 
 
-def bin_coverages(coverages, n=20):
+def bin_coverages(coverages, n):
 	"""
 	Reduce the number of coverage records by re-binning
 	each *n* coverage values into a new single bin.
@@ -833,7 +837,7 @@ def add_coverage_probes(probes, path,args):
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
 		n_intervals = N_INTERVALS[chromosome]
-		for record in subtract_intervals(bin_coverages(records), n_intervals):
+		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
 			height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
 			if height == 0.0:
 				height = 0.01
@@ -842,6 +846,7 @@ def add_coverage_probes(probes, path,args):
 	logger.info('Added %s coverage probes', n)
 
 
+#apply filtering
 def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FRQ'):
 
 	for variant in variants:
@@ -849,7 +854,7 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 		end = variant.INFO.get('END')
 		if end and not variant.INFO.get('SVTYPE') == 'TRA':
 
-			if abs(end - variant.start) <= min_size:
+			if abs( int(end) - variant.start) <= min_size:
 				# Too short
 				continue
 
@@ -873,6 +878,12 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 		yield variant
 
+#retrieve the sample id, assuming single sample vcf 
+def retrieve_sample_id(vcf_path):
+	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
+	return(sample)
+ 
+
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = argparse.ArgumentParser("VCF2cytosure - convert SV vcf files to cytosure")
@@ -886,6 +897,7 @@ def main():
 	group = parser.add_argument_group('Input')
 	group.add_argument('--coverage',help='Coverage file')
 	group.add_argument('--vcf',required=True,help='VCF file')
+	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
 	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file,this option is only  used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
@@ -902,7 +914,9 @@ def main():
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
-	tree = etree.parse(StringIO(CGH_TEMPLATE), parser)
+	sample_id=retrieve_sample_id(args.vcf) 
+
+	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id)), parser)
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
 	probes = tree.xpath('/data/cgh/probes')[0]
 	submission = tree.xpath('/data/cgh/submission')[0]
