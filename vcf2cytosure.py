@@ -8,7 +8,6 @@ import sys
 import logging
 import gzip
 import math
-import numpy
 from collections import namedtuple, defaultdict
 from io import StringIO
 from lxml import etree
@@ -501,7 +500,7 @@ def events(variants):
 				tmp=int(end)
 				end=start
 				start=tmp
-			
+
 			logger.debug('%s at %s:%s-%s (%s bp)', sv_type, chrom, start+1, end, end - start)
 			assert len(variant.REF) == 1
 
@@ -728,7 +727,7 @@ def parse_coverages(path):
 			chrom=content[0]
 			start=content[1]
 			end=content[2]
-			coverage=content[3] 
+			coverage=content[3]
 			start = int(start)
 			end = int(end)
 			coverage = float(coverage)
@@ -878,7 +877,7 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 		yield variant
 
-#retrieve the sample id, assuming single sample vcf 
+#retrieve the sample id, assuming single sample vcf
 def retrieve_sample_id(vcf_path):
 	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
 	return(sample)
@@ -914,7 +913,7 @@ def main():
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
-	sample_id=retrieve_sample_id(args.vcf) 
+	sample_id=retrieve_sample_id(args.vcf)
 
 	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id)), parser)
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
