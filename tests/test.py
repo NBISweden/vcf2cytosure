@@ -1,4 +1,4 @@
-import pytest 
+import pytest
 
 from unittest.mock import patch
 
@@ -9,4 +9,3 @@ def test_version_argument():
         with pytest.raises(SystemExit) as excinfo:
             vcf2cytosure.main()
         assert excinfo.value.code == 0
-    
