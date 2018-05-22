@@ -4,4 +4,4 @@ python:
 install:
   - python setup.py -q install
 # command to run tests
-script: pytest
+script: pytest tests/test.py
