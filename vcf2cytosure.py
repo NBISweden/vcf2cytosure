@@ -12,7 +12,7 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
-import constants
+import .constants
 
 __version__ = '0.2.1'
 
