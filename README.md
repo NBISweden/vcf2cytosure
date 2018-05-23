@@ -7,7 +7,7 @@ by OGT (Oxford Gene Technology). CytoSure is made for displaying oligo array mea
 It works on a set of probes, which this tool emulates. 
 
 ## Usage
-Cytosure requires an input vcf file. Optionally, a coverage bed file could be used to visualise the coverage across the genome.
+Cytosure requires an input vcf file. Optionally, a coverage bed or snp vcf file could be used to visualise the coverage across the genome.
 
     INSTALL:
         git  clone https://github.com/NBISweden/vcf2cytosure.git
@@ -22,10 +22,20 @@ Cytosure requires an input vcf file. Optionally, a coverage bed file could be us
 
     vcf2cytosure --vcf <input.vcf> --out <output.cgh> --coverge <overage.bed>
 
+    or:
+
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf>
+
 The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TIDDIT)
 
     TIDDIT --cov -b <input.bam> -o <coverage_pefix>
 
+The binning of the input coverage file may be controlled using the --bins parameter:
+
+	vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf> --bins 50
+
+Here 50 coverage bins will be pooled into one probe. The number of probes affect the amount of detail and resolution in the analysis.
+A large number of probes will make cytosure sluggish.
 
 ## Structural variants
 Structural variant (SV) types DEL, DUP, TDUP, IDUP, INV, and INS are supported.

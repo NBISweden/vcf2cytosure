@@ -6,11 +6,13 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 import argparse
 import sys
 import logging
+import gzip
 import math
 from collections import namedtuple, defaultdict
 from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
+
 
 from constants import *
 
@@ -34,7 +36,7 @@ def events(variants):
 		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
 			if start <= end:
-				tmp=end
+				tmp=int(end)
 				end=start
 				start=tmp
 
@@ -260,24 +262,49 @@ def parse_coverages(path):
 		for line in f:
 			if line.startswith('#'):
 				continue
-			chrom, start, end, coverage, _ = line.split('\t')
+			content=line.split('\t')
+			chrom=content[0]
+			start=content[1]
+			end=content[2]
+			coverage=content[3]
 			start = int(start)
 			end = int(end)
 			coverage = float(coverage)
 			yield CoverageRecord(chrom, start, end, coverage)
 
+def retrieve_snp(content,args):
+	snp_data=[]
+	snp_data.append(content[0])
+	snp_data.append(int(content[1]))
+	snp_data.append(float( content[7].split(";{}=".format(args.dp))[-1].split(";")[0] ))
 
-def compute_mean_coverage(path):
-	"""
-	Return mean coverage
-	"""
-	total = 0
-	n = 0
-	for record in parse_coverages(path):
-		total += record.coverage
-		n += 1
-	return total / n
+	return (snp_data)
 
+def parse_snv_coverages(args):
+		snv_list=[]
+		if args.snv.endswith(".gz"):
+			for line  in gzip.open(args.snv):
+				if line[0] == "#" or not ";{}=".format(args.dp) in line:
+					continue
+				content=line.strip().split()
+				snv_list.append(retrieve_snp(content,args))
+
+		elif args.snv.endswith(".vcf"):
+			for line in open(args.snv):
+				if line[0] == "#" or not ";{}=".format(args.dp) in line:
+					continue
+				content=line.strip().split()
+				snv_list.append(retrieve_snp(content,args))
+
+		else:
+			print ("only .vcf or gziped vcf is allowed, exiting")
+				
+		for snv in snv_list:
+			chrom = snv[0]
+			start = snv[1]
+			end = start+1
+			coverage = snv[2]
+			yield CoverageRecord(chrom, start, end, coverage)
 
 def group_by_chromosome(records):
 	"""
@@ -299,7 +326,7 @@ def group_by_chromosome(records):
 		yield prev_chrom, chromosome_records
 
 
-def bin_coverages(coverages, n=20):
+def bin_coverages(coverages, n):
 	"""
 	Reduce the number of coverage records by re-binning
 	each *n* coverage values into a new single bin.
@@ -331,20 +358,24 @@ def subtract_intervals(records, intervals):
 			yield record
 
 
-def add_coverage_probes(probes, path):
+def add_coverage_probes(probes, path,args):
 	"""
 	probes -- <probes> element
 	path -- path to tab-separated file with coverages
 	"""
 	logger.info('Reading %r ...', path)
-	coverages = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
+	if args.coverage:
+		coverages = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
+	else:
+		coverages = [r for r in parse_snv_coverages(args) if r.chrom in CONTIG_LENGTHS]
+
 	mean_coverage = sum(r.coverage for r in coverages) / len(coverages)
 	logger.info('Mean coverage is %.2f', mean_coverage)
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
 		n_intervals = N_INTERVALS[chromosome]
-		for record in subtract_intervals(bin_coverages(records), n_intervals):
+		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
 			height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
 			if height == 0.0:
 				height = 0.01
@@ -353,6 +384,7 @@ def add_coverage_probes(probes, path):
 	logger.info('Added %s coverage probes', n)
 
 
+#apply filtering
 def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FRQ'):
 
 	for variant in variants:
@@ -360,7 +392,7 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 		end = variant.INFO.get('END')
 		if end and not variant.INFO.get('SVTYPE') == 'TRA':
 
-			if abs(end - variant.start) <= min_size:
+			if abs( int(end) - variant.start) <= min_size:
 				# Too short
 				continue
 
@@ -384,25 +416,28 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 		yield variant
 
+#retrieve the sample id, assuming single sample vcf
+def retrieve_sample_id(vcf_path):
+	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
+	return(sample)
+ 
+
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 	parser = argparse.ArgumentParser("VCF2cytosure - convert SV vcf files to cytosure")
 
 	group = parser.add_argument_group('Filtering')
-	group.add_argument('--size', default=5000, type=int,
-		help='Minimum variant size. Default: %(default)s')
-	group.add_argument('--frequency', default=0.01, type=float,
-		help='Maximum frequency. Default: %(default)s')
-	group.add_argument('--frequency_tag', default='FRQ', type=str,
-		help='Frequency tag of the info field. Default: %(default)s')
-	group.add_argument('--no-filter', dest='do_filtering', action='store_false',
-		default=True,
-		help='Disable any filtering')
+	group.add_argument('--size', default=5000, type=int,help='Minimum variant size. Default: %(default)s')
+	group.add_argument('--frequency', default=0.01, type=float,help='Maximum frequency. Default: %(default)s')
+	group.add_argument('--frequency_tag', default='FRQ', type=str,help='Frequency tag of the info field. Default: %(default)s')
+	group.add_argument('--no-filter', dest='do_filtering', action='store_false',default=True,help='Disable any filtering')
 
 	group = parser.add_argument_group('Input')
-	group.add_argument('--coverage',
-		help='Coverage file')
+	group.add_argument('--coverage',help='Coverage file')
 	group.add_argument('--vcf',required=True,help='VCF file')
+	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
+	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
+	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file,this option is only  used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 
 	group.add_argument('-V','--version',action='version',version="%(prog)s "+__version__ ,
@@ -410,10 +445,16 @@ def main():
 	# parser.add_argument('xml', help='CytoSure design file')
 	args= parser.parse_args()
 
+	if args.coverage and args.snv:
+		print ("--coverage and --snv cannot be combined")
+		quit()
+
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
-	tree = etree.parse(StringIO(CGH_TEMPLATE), parser)
+	sample_id=retrieve_sample_id(args.vcf)
+
+	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id)), parser)
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
 	probes = tree.xpath('/data/cgh/probes')[0]
 	submission = tree.xpath('/data/cgh/submission')[0]
@@ -425,7 +466,7 @@ def main():
 	n = 0
 	for event in events(vcf):
 		height = ABERRATION_HEIGHTS[event.type]
-		end = event.start + 1000 if event.type in ('INS', 'BND') else event.end
+		end = event.start + 1000 if event.type in ('INS', 'BND',"TRA") else event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
 		comment = format_comment(event.info)
 		if "rankScore" in event.info:
@@ -440,7 +481,7 @@ def main():
 		make_aberration(submission, event.chrom, event.start, end, confirmation=event.type,
 			comment=comment, n_probes=occ, copy_number=rank_score)
 
-		if event.type in ('INS', 'BND'):
+		if event.type in ('INS', 'BND',"TRA"):
 			sign = +1 if event.type == 'INS' else -1
 			for pos, height in triangle_probes(event.start):
 				make_probe(probes, event.chrom, pos, pos + 60, sign * height, event.type)
@@ -451,8 +492,8 @@ def main():
 			for pos in spaced_probes(event.start, event.end - 1):
 				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 		n += 1
-	if args.coverage:
-		add_coverage_probes(probes, args.coverage)
+	if args.coverage or args.snv:
+		add_coverage_probes(probes, args.coverage, args)
 	else:
 		add_probes_between_events(probes, chr_intervals)
 
