@@ -50,7 +50,7 @@ def events(variants):
 				chrom2=variant.ALT[0].split(":")[0].split("[")[-1].split("]")[-1]
 			else:
 		
-				print "invalid variant  type {}: skipping".format(variant.ALT[0])
+				print ("invalid variant  type {}: skipping".format(variant.ALT[0]))
 
 			if chrom2 != chrom:
 				logger.debug('%s at %s:%s', sv_type, chrom, start+1)
