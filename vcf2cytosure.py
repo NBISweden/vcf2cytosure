@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.3.1'
+__version__ = '0.3.0'
 
 logger = logging.getLogger(__name__)
 

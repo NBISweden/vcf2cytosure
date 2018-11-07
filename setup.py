@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
 	name='vcf2cytosure',
-	version='0.2.1',
+	version='0.3.0',
 	author='Marcel Martin',
 	author_email='marcel.martin@scilifelab.se',
 	url='https://github.com/NBISweden/vcf2cytosure',
