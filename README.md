@@ -47,10 +47,6 @@ The SVs are displayed in the following way.
 * *DEL* (Deletions): Probes at height -1
 * *DUP* (Duplication): Probes at height +1
 * *TDUP* (Tandem duplication): Probes at height +1.5
-* *IDUP* (Interspersed duplication): Probes at height +0.5
-* *INV* (Inversion): Probes at height -0.5
-* *INS* (Insertion): Shown as an upwards-pointing "triangle" of 15 probes
-* *BND* (Break end): Downwards-pointing triangle
 
 For each SV, an *aberration* record is also generated. The attributes are
 filled in the following way:

@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def events(variants):
 		sv_type = variant.INFO.get('SVTYPE')
 		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
-			if start <= end:
+			if start >= end:
 				tmp=int(end)
 				end=start
 				start=tmp
@@ -45,8 +45,26 @@ def events(variants):
 
 			yield Event(chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO))
 		else:
-			logger.debug('%s at %s:%s', sv_type, chrom, start+1)
-			yield Event( chrom=chrom, start=start, end=None, type=sv_type, info=dict(variant.INFO) )
+
+			if ":" in variant.ALT[0] and ("[" in  variant.ALT[0] or "]" in  variant.ALT[0]):
+				chrom2=variant.ALT[0].split(":")[0].split("[")[-1].split("]")[-1]
+			else:
+		
+				print ("invalid variant  type {}: skipping".format(variant.ALT[0]))
+
+			if chrom2 != chrom:
+				logger.debug('%s at %s:%s', sv_type, chrom, start+1)
+				yield Event( chrom=chrom, start=start, end=None, type=sv_type, info=dict(variant.INFO) )
+
+			else:
+				end=int(variant.ALT[0].split(":")[1].split("[")[-1].split("]")[-1])
+				if start >= end:
+					tmp=int(end)
+					end=start
+					start=tmp
+
+				logger.debug('%s at %s:%s', sv_type, chrom, start+1)
+				yield Event( chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO) )
 
 def strip_template(path):
 	"""
@@ -184,7 +202,7 @@ def spaced_probes(start, end, probe_spacing=PROBE_SPACING):
 		pos = start + int(i * spacing)
 
 
-def triangle_probes(center, height=2.5, width=5001, steps=15):
+def probe_point(center, height=2.5, width=5001, steps=15):
 	"""
 	Yield (pos, height) pairs that "draw" a triangular shape (pointing upwards)
 	"""
@@ -427,7 +445,7 @@ def main():
 	parser = argparse.ArgumentParser("VCF2cytosure - convert SV vcf files to cytosure")
 
 	group = parser.add_argument_group('Filtering')
-	group.add_argument('--size', default=5000, type=int,help='Minimum variant size. Default: %(default)s')
+	group.add_argument('--size', default=1000, type=int,help='Minimum variant size. Default: %(default)s')
 	group.add_argument('--frequency', default=0.01, type=float,help='Maximum frequency. Default: %(default)s')
 	group.add_argument('--frequency_tag', default='FRQ', type=str,help='Frequency tag of the info field. Default: %(default)s')
 	group.add_argument('--no-filter', dest='do_filtering', action='store_false',default=True,help='Disable any filtering')
@@ -438,6 +456,7 @@ def main():
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
 	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file,this option is only  used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
+	group.add_argument('--maxbnd',type=int,default=10000,help='Maxixmum BND size, BND events exceeding this size are discarded')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 
 	group.add_argument('-V','--version',action='version',version="%(prog)s "+__version__ ,
@@ -466,7 +485,7 @@ def main():
 	n = 0
 	for event in events(vcf):
 		height = ABERRATION_HEIGHTS[event.type]
-		end = event.start + 1000 if event.type in ('INS', 'BND',"TRA") else event.end
+		end = event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
 		comment = format_comment(event.info)
 		if "rankScore" in event.info:
@@ -474,23 +493,29 @@ def main():
 		else:
 			rank_score =0
 
+		#occ=0
+		#if args.frequency_tag in event.info:
+		#	occ=event.info[args.frequency_tag]
 		occ=0
 		if "OCC" in event.info:
-			occ=event.info['OCC']
+			occ=event.info["OCC"]
+
+		if event.type in ("INV",'INS', 'BND',"TRA") and not event.end:
+			continue
+			#pass
+		elif event.type in ("INV",'INS', 'BND',"TRA") and (abs(event.start-event.end) > args.maxbnd ):
+			#pass
+			continue
 
 		make_aberration(submission, event.chrom, event.start, end, confirmation=event.type,
 			comment=comment, n_probes=occ, copy_number=rank_score)
 
-		if event.type in ('INS', 'BND',"TRA"):
-			sign = +1 if event.type == 'INS' else -1
-			for pos, height in triangle_probes(event.start):
-				make_probe(probes, event.chrom, pos, pos + 60, sign * height, event.type)
-		else:
-			chr_intervals[event.chrom].append((event.start, event.end))
-			# show probes at slightly different height than segments
-			height *= 1.05
-			for pos in spaced_probes(event.start, event.end - 1):
-				make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
+
+		
+		chr_intervals[event.chrom].append((event.start, event.end))
+		# show probes at slightly different height than segments
+		for pos in spaced_probes(event.start, event.end - 1):
+			make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 		n += 1
 	if args.coverage or args.snv:
 		add_coverage_probes(probes, args.coverage, args)
