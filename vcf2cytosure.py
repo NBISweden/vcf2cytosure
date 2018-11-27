@@ -372,14 +372,10 @@ def add_coverage_probes(probes, path,args):
 	mean_coverage = sum(r.coverage for r in coverages) / len(coverages)
 	logger.info('Mean coverage is %.2f', mean_coverage)
 
-
-
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
 		coverage_factor = 2
-		if chromosome == 'Y':
-			coverage_factor = 1
-		if sex == 'male' and chromosome == 'X':
+		if sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
 			coverage_factor = 1
 
 		n_intervals = N_INTERVALS[chromosome]
