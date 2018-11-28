@@ -20,11 +20,11 @@ Cytosure requires an input vcf file. Optionally, a coverage bed or snp vcf file 
     
     optionally
 
-    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --coverge <overage.bed>
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --coverge <overage.bed> --sex <male|female>
 
     or:
 
-    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf>
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --snv <snv.vcf> --sex <male|female>
 
 The coverage bed file may be created using TIDDIT(https://github.com/J35P312/TIDDIT)
 
