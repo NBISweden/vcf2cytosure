@@ -393,7 +393,7 @@ def add_coverage_probes(probes, path,args):
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
 		coverage_factor = 2
-		if sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
+		if args.sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
 			coverage_factor = 1
 
 		n_intervals = N_INTERVALS[chromosome]
@@ -479,7 +479,7 @@ def main():
 
 	sex_male = "false"
 	promega_sex = 'Female'
-	if sex == "male":
+	if args.sex == "male":
 		sex_male = 'true'
 		promega_sex = 'Male'
 
