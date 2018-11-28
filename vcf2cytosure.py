@@ -316,7 +316,7 @@ def parse_snv_coverages(args):
 
 		else:
 			print ("only .vcf or gziped vcf is allowed, exiting")
-				
+
 		for snv in snv_list:
 			chrom = snv[0]
 			start = snv[1]
@@ -392,9 +392,13 @@ def add_coverage_probes(probes, path,args):
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
+		coverage_factor = 2
+		if sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
+			coverage_factor = 1
+
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
-			height = min(2 * record.coverage / mean_coverage - 2, MAX_HEIGHT)
+			height = min(coverage_factor * record.coverage / mean_coverage - 2, MAX_HEIGHT)
 			if height == 0.0:
 				height = 0.01
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
@@ -438,7 +442,7 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 def retrieve_sample_id(vcf_path):
 	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
 	return(sample)
- 
+
 
 def main():
 	logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -452,6 +456,7 @@ def main():
 
 	group = parser.add_argument_group('Input')
 	group.add_argument('--coverage',help='Coverage file')
+	group.add_argument('--sex',required=False, default='female', help='Sample sex male/female. Default: %(default)s')
 	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
@@ -471,9 +476,16 @@ def main():
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
 	parser = etree.XMLParser(remove_blank_text=True)
-	sample_id=retrieve_sample_id(args.vcf)
 
-	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id)), parser)
+	sex_male = "false"
+	promega_sex = 'Female'
+	if sex == "male":
+		sex_male = 'true'
+		promega_sex = 'Male'
+
+	sample_id=retrieve_sample_id(args.vcf)
+	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id,sex_male,promega_sex,sex_male)), parser)
+
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
 	probes = tree.xpath('/data/cgh/probes')[0]
 	submission = tree.xpath('/data/cgh/submission')[0]

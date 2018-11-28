@@ -401,8 +401,8 @@ CGH_TEMPLATE = u"""
 <cgh mother="-1" father="-1" genomeBuild="hg19" softwareVersion="4.8.32" batched="false">
   <submission design="031035" feFile="dummy.txt" cghFile="dummy.cgh" scanDate="1462520414000" barcode="253103511677_1_3" sampleCy3="true">
   <notes/>
-  <sample sampleId="{}" male="false"><phenotype/></sample>
-  <reference sampleId="Promega Female" male="false"><phenotype/></reference>
+  <sample sampleId="{}" male="{}"><phenotype/></sample>
+  <reference sampleId="Promega {}" male="{}"><phenotype/></reference>
   <extra>
     <datum category="Nanodrop" type="Sample DNA (ng)" dataType="Float"/>
     <datum category="Sample Extraction" type="Sample Arrival Date" dataType="Date"/>
