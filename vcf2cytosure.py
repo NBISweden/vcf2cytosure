@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def events(variants):
 				yield Event( chrom=chrom, start=start, end=None, type=sv_type, info=dict(variant.INFO) )
 
 			else:
-				end=int(variant.ALT[0].split(":")[1].split("[")[-1].split("]")[-1])
+				end=int(variant.ALT[0].split(":")[1].split("[")[0].split("]")[0])
 				if start >= end:
 					tmp=int(end)
 					end=start
