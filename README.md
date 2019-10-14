@@ -13,6 +13,10 @@ Cytosure requires an input vcf file. Optionally, a coverage bed or snp vcf file 
         git  clone https://github.com/NBISweden/vcf2cytosure.git
         cd vcf2cytosure
         pip install -e .
+	
+    or use Singularity  
+    
+    	singularity pull shub://J35P312/vcf2cytosure
 
     RUNNING:
         
