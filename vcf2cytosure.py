@@ -553,7 +553,7 @@ def main():
 		elif event.type in ("INV",'INS', 'BND',"TRA") and (abs(event.start-event.end) > args.maxbnd ):
 			#pass
 			continue
-		elif blacklist:
+		elif args.blacklist:
 			if contained_by_blacklist(event, blacklist):
 				continue
 
