@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.4.3'
+__version__ = '0.5.0'
 
 logger = logging.getLogger(__name__)
 
@@ -500,6 +500,8 @@ def main():
 			   help='Print program version and exit.')
 	# parser.add_argument('xml', help='CytoSure design file')
 	args= parser.parse_args()
+
+	logger.info('vcf2cytosure %s', __version__)
 
 	if args.coverage and args.snv:
 		print ("--coverage and --snv cannot be combined")
