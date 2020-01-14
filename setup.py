@@ -5,6 +5,8 @@ setup(
 	version='0.4.3',
 	author='Marcel Martin',
 	author_email='marcel.martin@scilifelab.se',
+	maintainer='Daniel Nilsson',
+	maintainer_email='daniel.nilsson@scilifelab.se',
 	url='https://github.com/NBISweden/vcf2cytosure',
 	description='Convert VCF with structural variations to CytoSure format',
 	#long_description=long_description,
