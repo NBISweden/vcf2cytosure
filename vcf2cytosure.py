@@ -392,13 +392,13 @@ def add_coverage_probes(probes, path,args):
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
-		coverage_factor = 2
+		coverage_factor = 1
 		if args.sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
-			coverage_factor = 1
+			coverage_factor = 2
 
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
-			height = min(coverage_factor * record.coverage / mean_coverage - 2, MAX_HEIGHT)
+			height = min(coverage_factor * record.coverage / mean_coverage - 1, MAX_HEIGHT)
 			if height == 0.0:
 				height = 0.01
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
