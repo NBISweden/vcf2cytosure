@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.4.3'
+__version__ = '0.5.0'
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def events(variants):
 			if ":" in variant.ALT[0] and ("[" in  variant.ALT[0] or "]" in  variant.ALT[0]):
 				chrom2=variant.ALT[0].split(":")[0].split("[")[-1].split("]")[-1]
 			else:
-		
+
 				print ("invalid variant  type {}: skipping".format(variant.ALT[0]))
 
 			if chrom2 != chrom:
@@ -392,13 +392,13 @@ def add_coverage_probes(probes, path,args):
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
-		coverage_factor = 2
+		coverage_factor = 1
 		if args.sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
-			coverage_factor = 1
+			coverage_factor = 2
 
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
-			height = min(coverage_factor * record.coverage / mean_coverage - 2, MAX_HEIGHT)
+			height = min(coverage_factor * record.coverage / mean_coverage - 1, MAX_HEIGHT)
 			if height == 0.0:
 				height = 0.01
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
@@ -438,6 +438,36 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 
 		yield variant
 
+class BlacklistRecord:
+	__slots__ = ('chrom', 'start', 'end')
+
+	def __init__(self, chrom, start, end):
+		self.chrom = chrom
+		self.start = start
+		self.end = end
+
+# read Blacklist
+def read_blacklist(path):
+	with open(path) as f:
+		for line in f:
+			if line.startswith('#'):
+				continue
+			content=line.split('\t')
+			chrom=content[0]
+			start=content[1]
+			end=content[2]
+			start = int(start)
+			end = int(end)
+			yield BlacklistRecord(chrom, start, end)
+
+def contained_by_blacklist(event, blacklist):
+	for br in blacklist:
+		if event.chrom == br.chrom:
+			if event.start >= br.start and event.end <= br.end:
+				return True
+
+	return False
+
 #retrieve the sample id, assuming single sample vcf
 def retrieve_sample_id(vcf_path):
 	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
@@ -464,10 +494,14 @@ def main():
 	group.add_argument('--maxbnd',type=int,default=10000,help='Maxixmum BND size, BND events exceeding this size are discarded')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 
+	group.add_argument('--blacklist', help='Blacklist bed format file to exclude completely contained variants.')
+
 	group.add_argument('-V','--version',action='version',version="%(prog)s "+__version__ ,
 			   help='Print program version and exit.')
 	# parser.add_argument('xml', help='CytoSure design file')
 	args= parser.parse_args()
+
+	logger.info('vcf2cytosure %s', __version__)
 
 	if args.coverage and args.snv:
 		print ("--coverage and --snv cannot be combined")
@@ -489,6 +523,9 @@ def main():
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
 	probes = tree.xpath('/data/cgh/probes')[0]
 	submission = tree.xpath('/data/cgh/submission')[0]
+
+	if args.blacklist:
+		blacklist = [r for r in read_blacklist(args.blacklist) if r.chrom in CONTIG_LENGTHS]
 
 	chr_intervals = defaultdict(list)
 	vcf = VCF(args.vcf)
@@ -518,12 +555,13 @@ def main():
 		elif event.type in ("INV",'INS', 'BND',"TRA") and (abs(event.start-event.end) > args.maxbnd ):
 			#pass
 			continue
+		elif args.blacklist:
+			if contained_by_blacklist(event, blacklist):
+				continue
 
 		make_aberration(submission, event.chrom, event.start, end, confirmation=event.type,
 			comment=comment, n_probes=occ, copy_number=rank_score)
 
-
-		
 		chr_intervals[event.chrom].append((event.start, event.end))
 		# show probes at slightly different height than segments
 		for pos in spaced_probes(event.start, event.end - 1):
