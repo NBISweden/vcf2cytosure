@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 
 logger = logging.getLogger(__name__)
 
@@ -469,8 +469,12 @@ def contained_by_blacklist(event, blacklist):
 	return False
 
 #retrieve the sample id, assuming single sample vcf
-def retrieve_sample_id(vcf_path):
-	sample=vcf_path.split("/")[-1].split("_")[0].split(".")[0]
+def retrieve_sample_id(vcf, vcf_path):
+	samples = vcf.samples
+	if len(samples) == 1:
+		sample = samples[0]
+	else:
+		sample = vcf_path.split("/")[-1].split("_")[0].split(".")[0]
 	return(sample)
 
 
@@ -490,7 +494,7 @@ def main():
 	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
-	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file,this option is only  used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
+	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file. This option is only used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
 	group.add_argument('--maxbnd',type=int,default=10000,help='Maxixmum BND size, BND events exceeding this size are discarded')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
 
@@ -517,8 +521,10 @@ def main():
 		sex_male = 'true'
 		promega_sex = 'Male'
 
-	sample_id=retrieve_sample_id(args.vcf)
-	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id,sex_male,promega_sex,sex_male)), parser)
+	vcf = VCF(args.vcf)
+
+	sample_id=retrieve_sample_id(vcf, args.vcf)
+	tree = etree.parse(StringIO(CGH_TEMPLATE.format(sample_id,sample_id,sample_id,sample_id,sex_male,promega_sex,sex_male)), parser)
 
 	segmentation = tree.xpath('/data/cgh/segmentation')[0]
 	probes = tree.xpath('/data/cgh/probes')[0]
@@ -528,7 +534,6 @@ def main():
 		blacklist = [r for r in read_blacklist(args.blacklist) if r.chrom in CONTIG_LENGTHS]
 
 	chr_intervals = defaultdict(list)
-	vcf = VCF(args.vcf)
 	if args.do_filtering:
 		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
 	n = 0
