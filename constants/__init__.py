@@ -399,7 +399,7 @@ CGH_TEMPLATE = u"""
 </noResults>
 <pgd_reagents/>
 <cgh mother="-1" father="-1" genomeBuild="hg19" softwareVersion="4.8.32" batched="false">
-  <submission design="031035" feFile="dummy.txt" cghFile="dummy.cgh" scanDate="1462520414000" barcode="253103511677_1_3" sampleCy3="true">
+  <submission design="031035" feFile="{}.txt" cghFile="{}.cgh" scanDate="1462520414000" barcode="{}" sampleCy3="true">
   <notes/>
   <sample sampleId="{}" male="{}"><phenotype/></sample>
   <reference sampleId="Promega {}" male="{}"><phenotype/></reference>
