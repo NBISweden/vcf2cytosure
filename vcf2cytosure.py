@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.5.1'
+__version__ = '0.6.0'
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +298,26 @@ def retrieve_snp(content,args):
 
 	return (snp_data)
 
+def parse_cn_coverages(args):
+	probe_data=[]
+	opener=open
+	first=True
+	for line in open(args.cn):
+		if first:
+			first=False
+			continue
+
+		content=line.strip().split()
+
+		chrom = content[0]
+		start = int(content[1])
+		end = int(content[2])
+		coverage = float(content[5])
+		#first version
+		#yield CoverageRecord(chrom, start, end, -coverage)
+		yield CoverageRecord(chrom, start, end, coverage)
+
+
 def parse_snv_coverages(args):
 		snv_list=[]
 		if args.snv.endswith(".gz"):
@@ -323,6 +343,7 @@ def parse_snv_coverages(args):
 			end = start+1
 			coverage = snv[2]
 			yield CoverageRecord(chrom, start, end, coverage)
+
 
 def group_by_chromosome(records):
 	"""
@@ -384,6 +405,8 @@ def add_coverage_probes(probes, path,args):
 	logger.info('Reading %r ...', path)
 	if args.coverage:
 		coverages = [r for r in parse_coverages(path) if r.chrom in CONTIG_LENGTHS]
+	elif args.cn:
+		coverages = [r for r in parse_cn_coverages(args) if r.chrom in CONTIG_LENGTHS]
 	else:
 		coverages = [r for r in parse_snv_coverages(args) if r.chrom in CONTIG_LENGTHS]
 
@@ -398,9 +421,14 @@ def add_coverage_probes(probes, path,args):
 
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
-			height = min(coverage_factor * record.coverage / mean_coverage - 1, MAX_HEIGHT)
-			if height == 0.0:
-				height = 0.01
+			if not args.cn:
+				height = min(coverage_factor * record.coverage / mean_coverage - 1, MAX_HEIGHT)
+				if height == 0.0:
+					height = 0.01
+			else:
+				height=record.coverage
+				print(height)
+
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
 			n += 1
 	logger.info('Added %s coverage probes', n)
@@ -494,6 +522,7 @@ def main():
 	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
+	group.add_argument('--cn',type=str,help='add probes using cnvkit cn file(cannot be used together with --coverage)')
 	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file. This option is only used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
 	group.add_argument('--maxbnd',type=int,default=10000,help='Maxixmum BND size, BND events exceeding this size are discarded')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
@@ -572,8 +601,9 @@ def main():
 		for pos in spaced_probes(event.start, event.end - 1):
 			make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 		n += 1
-	if args.coverage or args.snv:
+	if args.coverage or args.snv or args.cn:
 		add_coverage_probes(probes, args.coverage, args)
+
 	else:
 		add_probes_between_events(probes, chr_intervals)
 
