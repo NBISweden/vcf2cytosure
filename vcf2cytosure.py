@@ -16,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 
 logger = logging.getLogger(__name__)
 
@@ -536,9 +536,10 @@ def main():
 
 	logger.info('vcf2cytosure %s', __version__)
 
-	if args.coverage and args.snv:
-		print ("--coverage and --snv cannot be combined")
+	if (args.coverage and args.cn) or (args.coverage and args.snv) or (args.snv and args.cn):
+		print ("Choose one of --coverage, --snv and --cn. They cannot be combined.")
 		quit()
+
 
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
