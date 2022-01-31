@@ -15,7 +15,7 @@ ABERRATION_HEIGHTS = {
 
 # Hard-coded data about GRCh37 follows.
 # Whenever GRCh38 becomes relevant, use external .fai and .bed files instead.
-CONTIG_LENGTHS = {
+CONTIG_LENGTHS_37 = {
 	'1':  249250621,
 	'2':  243199373,
 	'3':  198022430,
@@ -41,8 +41,35 @@ CONTIG_LENGTHS = {
 	'X':  155270560,
 	'Y':   59373566,
 }
+CONTIG_LENGTHS_38 = {
+'1':    248956422,
+'2':    242193529,
+'3':	198295559,
+'4':    190214555,
+'5':    181538259,
+'6':    170805979,
+'7':    159345973,
+'8':    145138636,
+'9':    138394717,
+'10':   133797422,
+'11':   135086622,
+'12':   133275309,
+'13':   114364328,
+'14':   107043718,
+'15':   101991189,
+'16':   90338345,
+'17':   83257441,
+'18':   80373285,
+'19':   58617616,
+'20':   64444167,
+'21':   46709983,
+'22':   50818468,
+'X':    15604089,
+'Y':    57227415,
+}
+
 # Intervals at which the reference contains N bases
-N_INTERVALS = {
+N_INTERVALS_37 = {
 	'1': [
 		(0, 10000),
 		(177417, 227417),
@@ -392,7 +419,7 @@ N_INTERVALS = {
 
 CHROM_RENAME = {'X': '23', 'Y': '24'}
 
-CGH_TEMPLATE = u"""
+CGH_TEMPLATE_37 = u"""
 <data formatVersion="2">
 <pgdData><pgdDataEntry key="SPECIMEN_TYPE" value="BLASTOMERE"/></pgdData>
 <noResults>
