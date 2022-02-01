@@ -314,8 +314,8 @@ def parse_cn_coverages(args):
 		end = int(content[2])
 		coverage = float(content[5])
 		#first version
-		#yield CoverageRecord(chrom, start, end, -coverage)
-		yield CoverageRecord(chrom, start, end, coverage)
+		yield CoverageRecord(chrom, start, end, -coverage)
+		#yield CoverageRecord(chrom, start, end, coverage)
 
 
 def parse_snv_coverages(args):
