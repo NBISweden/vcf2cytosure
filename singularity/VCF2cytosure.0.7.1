@@ -1,0 +1,35 @@
+BootStrap: debootstrap
+OSVersion: trusty
+MirrorURL: http://us.archive.ubuntu.com/ubuntu/
+
+%environment
+SHELL=/bin/bash
+PATH=/opt/anaconda/bin:${PATH}
+LC_ALL=C.UTF-8
+
+%runscript
+   echo "This is what happens when you run the container..."
+   export PATH=/opt/anaconda/bin:${PATH}
+
+%post
+    sed -i 's/$/ universe/' /etc/apt/sources.list
+    apt-get update
+    apt-get -y --force-yes install build-essential cmake make zlib1g-dev python python-dev python-setuptools git wget libbz2-dev unzip libblas-dev liblapack-dev gfortran libssl-dev lzma-dev zlib1g-dev gcc libssl-dev openssl libcrypto++-dev libssl1.0.0 ca-certificates libcurl4-openssl-dev
+    easy_install pip
+
+    cd /root/ && wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    cd /root/ && chmod 700 ./Miniconda3-latest-Linux-x86_64.sh
+    cd /root/ && bash ./Miniconda3-latest-Linux-x86_64.sh -b -p /opt/anaconda/
+
+    export PATH=/opt/anaconda/bin:${PATH}
+
+    conda config --add channels defaults
+    conda config --add channels conda-forge
+    conda config --add channels bioconda
+    #conda install -c bioconda cyvcf2 numpy
+
+    wget https://github.com/NBISweden/vcf2cytosure/archive/0.7.1.zip
+    unzip 0.7.1.zip
+    mv vcf2cytosure-0.7.1 /bin
+
+    cd /bin/vcf2cytosure-0.7.1 && pip install -e .
