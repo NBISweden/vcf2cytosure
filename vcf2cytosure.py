@@ -539,7 +539,7 @@ def main():
 		print ("Choose one of --coverage, --snv and --cn. They cannot be combined.")
 		quit()
 
-	if args.genome == 38:
+	if int(args.genome) == 38:
 		CGH_TEMPLATE = CGH_TEMPLATE_38
 		CONTIG_LENGTHS = CONTIG_LENGTHS_38
 		N_INTERVALS = N_INTERVALS_38
