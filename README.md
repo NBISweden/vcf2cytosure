@@ -106,3 +106,5 @@ SVs.
 - Names "X" and "Y" are not used for the corresponding chromosomes. Instead,
   the `X` chromosome is stored as `23`, they `Y` chromosome as `24` (in probes,
   segments and aberrations).
+
+- N_INTERVALS for hg38 were taken from http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/gap.txt.gz.
