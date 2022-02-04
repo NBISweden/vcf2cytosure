@@ -514,7 +514,7 @@ def main():
 	group.add_argument('--no-filter', dest='do_filtering', action='store_false',default=True,help='Disable any filtering')
 
 	group = parser.add_argument_group('Input')
-	group.add_argument('--genome',reguired=False, default=37, help='Human genome version. Use 37 for GRCh37/hg19, 38 for GRCh38 template.')
+	group.add_argument('--genome',required=False, default=37, help='Human genome version. Use 37 for GRCh37/hg19, 38 for GRCh38 template.')
 	group.add_argument('--sex',required=False, default='female', help='Sample sex male/female. Default: %(default)s')
 	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
