@@ -13,7 +13,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.7.0'
+__version__ = '0.7.1'
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +311,8 @@ def parse_cn_coverages(args):
 		end = int(content[2])
 		coverage = float(content[5])
 		#first version
-		#yield CoverageRecord(chrom, start, end, -coverage)
-		yield CoverageRecord(chrom, start, end, coverage)
+		yield CoverageRecord(chrom, start, end, -coverage)
+		#yield CoverageRecord(chrom, start, end, coverage)
 
 
 def parse_snv_coverages(args):
