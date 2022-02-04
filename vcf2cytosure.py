@@ -4,25 +4,22 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 """
 
 import argparse
-import sys
 import logging
 import gzip
-import math
 from collections import namedtuple, defaultdict
 from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
-
 from constants import *
 
-__version__ = '0.6.1'
+__version__ = '0.7.0'
 
 logger = logging.getLogger(__name__)
 
 Event = namedtuple('Event', ['chrom', 'start', 'end', 'type', 'info'])
 
-def events(variants):
+def events(variants, CONTIG_LENGTHS):
 	"""Iterate over variants and yield Events"""
 
 	for variant in variants:
@@ -254,7 +251,7 @@ def complement_intervals(intervals, chromosome_length):
 		yield prev_end, chromosome_length
 
 
-def add_probes_between_events(probes, chr_intervals):
+def add_probes_between_events(probes, chr_intervals, CONTIG_LENGTHS):
 	for chrom, intervals in chr_intervals.items():
 		if chrom not in CONTIG_LENGTHS:
 			continue
@@ -397,7 +394,7 @@ def subtract_intervals(records, intervals):
 			yield record
 
 
-def add_coverage_probes(probes, path,args):
+def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 	"""
 	probes -- <probes> element
 	path -- path to tab-separated file with coverages
@@ -517,12 +514,14 @@ def main():
 	group.add_argument('--no-filter', dest='do_filtering', action='store_false',default=True,help='Disable any filtering')
 
 	group = parser.add_argument_group('Input')
-	group.add_argument('--coverage',help='Coverage file')
+	group.add_argument('--genome',required=False, default=37, help='Human genome version. Use 37 for GRCh37/hg19, 38 for GRCh38 template.')
 	group.add_argument('--sex',required=False, default='female', help='Sample sex male/female. Default: %(default)s')
 	group.add_argument('--vcf',required=True,help='VCF file')
 	group.add_argument('--bins',type=int,default=20,help='the number of coverage bins per probes default=20')
+	group.add_argument('--coverage',help='Coverage file')
+	group.add_argument('--cn', type=str,
+					   help='add probes using cnvkit cn file(cannot be used together with --coverage)')
 	group.add_argument('--snv',type=str,help='snv vcf file, use coverage annotation to position the height of the probes(cannot be used together with --coverage)')
-	group.add_argument('--cn',type=str,help='add probes using cnvkit cn file(cannot be used together with --coverage)')
 	group.add_argument('--dp',type=str,default="DP",help='read depth tag of snv vcf file. This option is only used if you use snv to set the heigth of the probes. The dp tag is a tag which is used to retrieve the depth of coverage across the snv (default=DP)')
 	group.add_argument('--maxbnd',type=int,default=10000,help='Maxixmum BND size, BND events exceeding this size are discarded')
 	group.add_argument('--out',help='output file (default = the prefix of the input vcf)')
@@ -540,6 +539,14 @@ def main():
 		print ("Choose one of --coverage, --snv and --cn. They cannot be combined.")
 		quit()
 
+	if int(args.genome) == 38:
+		CGH_TEMPLATE = CGH_TEMPLATE_38
+		CONTIG_LENGTHS = CONTIG_LENGTHS_38
+		N_INTERVALS = N_INTERVALS_38
+	else:
+		CGH_TEMPLATE = CGH_TEMPLATE_37
+		CONTIG_LENGTHS = CONTIG_LENGTHS_37
+		N_INTERVALS = N_INTERVALS_37
 
 	if not args.out:
 		args.out=".".join(args.vcf.split(".")[0:len(args.vcf.split("."))-1])+".cgh"
@@ -567,7 +574,7 @@ def main():
 	if args.do_filtering:
 		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
 	n = 0
-	for event in events(vcf):
+	for event in events(vcf, CONTIG_LENGTHS):
 		height = ABERRATION_HEIGHTS[event.type]
 		end = event.end
 		make_segment(segmentation, event.chrom, event.start, end, height)
@@ -603,10 +610,10 @@ def main():
 			make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 		n += 1
 	if args.coverage or args.snv or args.cn:
-		add_coverage_probes(probes, args.coverage, args)
+		add_coverage_probes(probes, args.coverage, args, CONTIG_LENGTHS, N_INTERVALS)
 
 	else:
-		add_probes_between_events(probes, chr_intervals)
+		add_probes_between_events(probes, chr_intervals, CONTIG_LENGTHS)
 
 	tree.write(args.out, pretty_print=True)
 	logger.info('Wrote %d variants to CGH', n)
