@@ -5,6 +5,7 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 
 import argparse
 import sys
+import pandas as pd
 import logging
 import gzip
 import math
@@ -302,20 +303,19 @@ def parse_cn_coverages(args):
 	probe_data=[]
 	opener=open
 	first=True
-	for line in open(args.cn):
-		if first:
-			first=False
-			continue
+	df = pd.read_csv(args.cn, sep="\t")
+	for i in range(0,len(df["log2"])):
 
-		content=line.strip().split()
+		chrom = df["chromosome"][i]
+		start = int(df["start"][i])
+		end = int(df["end"][i])
+		coverage =float(df["log2"][i])
 
-		chrom = content[0]
-		start = int(content[1])
-		end = int(content[2])
-		coverage = float(content[5])
-		#first version
-		yield CoverageRecord(chrom, start, end, -coverage)
-		#yield CoverageRecord(chrom, start, end, coverage)
+		if "gene" in df:
+			if df["gene"][i] == "Antitarget":
+				continue
+
+		yield CoverageRecord(chrom, start, end, coverage)
 
 
 def parse_snv_coverages(args):
