@@ -13,7 +13,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.7.1'
+__version__ = '0.7.2'
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def events(variants, CONTIG_LENGTHS):
 		if chrom not in CONTIG_LENGTHS:
 			continue
 		start = variant.start
-		sv_type = variant.INFO.get('SVTYPE')
+		sv_type = variant.INFO.get('SVTYPE').split(':')[0]
 		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
 			if start >= end:
