@@ -13,7 +13,7 @@ setup(
 	license='MIT',
 	#packages=[],
 	py_modules=['vcf2cytosure'],
-	install_requires=['lxml', 'cyvcf2'],
+	install_requires=['lxml','pandas', 'cyvcf2'],
 	entry_points={'console_scripts': ['vcf2cytosure=vcf2cytosure:main']},
 	classifiers=[
 		"Development Status :: 3 - Alpha",
