@@ -32,7 +32,7 @@ def events(variants, CONTIG_LENGTHS):
 		if chrom not in CONTIG_LENGTHS:
 			continue
 		start = variant.start
-		sv_type = variant.INFO.get('SVTYPE')
+		sv_type = variant.INFO.get('SVTYPE').split(':')[0]
 		if variant.INFO.get("END"):
 			end = variant.INFO.get('END')
 			if start >= end:
