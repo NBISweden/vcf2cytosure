@@ -64,10 +64,13 @@ filled in the following way:
 * The other attributes are set to some arbitrary, but constant value.
 
 If the `--coverage` option is used, probe heights will represent coverage.
-Probes are drawn at height 0 if the coverage corresponds to the average
-coverage, at +2 for double average coverage, and at -2 for no coverage.
-Coverages higher than four times the average coverage are clamped to
-a height of +4 and are not shown at their actual height.
+Coverage is represented as log2 ratios of input bin coverage relative to 
+all bin coverages, limited at [MIN_HEIGHT, MAX_HEIGHT]. 
+This means probes are drawn at height 0 if the coverage corresponds to the average
+coverage, at 0.58 for a heterozygote duplication, 1 for double average coverage, -1 for a heterozygous deletion
+and at around -MAX_HEIGHT for little or no coverage.
+
+High or low average coverages are clamped to a height of +/-4 and are not shown at their actual height.
 
 If the `--coverage` option is not used, evenly spaced probes with height 0.01
 (height 0.0 would not be shown by CytoSure) are generated for the areas between

@@ -8,6 +8,7 @@ import sys
 import pandas as pd
 import logging
 import gzip
+import numpy as np
 from collections import namedtuple, defaultdict
 from io import StringIO
 from lxml import etree
@@ -15,7 +16,7 @@ from cyvcf2 import VCF
 
 from constants import *
 
-__version__ = '0.7.2'
+__version__ = '0.8'
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ def make_probe(parent, chromosome, start, end, height, text):
 		'stop': str(end),
 		'normalized': '{:.3f}'.format(-height),
 		'smoothed': '0.0',
-		'smoothed_normalized': '-0.25',
+		'smoothed_normalized': '0.0',
 		'sequence': 'AACCGGTT',
 	})
 
@@ -147,6 +148,11 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='conver
 	method -- short string
 	confirmation -- string
 	"""
+	# Set gain to false for dels
+	is_gain = 'true'
+	if (confirmation == "DEL"):
+		is_gain = 'false'
+
 	aberration = etree.SubElement(parent, 'aberration')
 	aberration.attrib.update(dict(
 		chr=CHROM_RENAME.get(chromosome, chromosome),
@@ -163,15 +169,14 @@ def make_aberration(parent, chromosome, start, end, comment=None, method='conver
 		stopProbe='',
 		maxStartProbe='',
 		maxStopProbe='',
-
+		gain=is_gain,
+		method=method,
 		# TODO fill in the following values with something sensible
 		automationLevel='1.0',
 		baseline='0.0',
 		mosaicism='0.0',
-		gain='true',
 		inheritanceCoverage='0.0',
 		logRatio='-0.4444',  # mean log ratio
-		method=method,
 		p='0.003333',  # p-value
 		sd='0.2222',  # standard deviation
 	))
@@ -408,8 +413,9 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 	else:
 		coverages = [r for r in parse_snv_coverages(args) if r.chrom in CONTIG_LENGTHS]
 
-	mean_coverage = sum(r.coverage for r in coverages) / len(coverages)
-	logger.info('Mean coverage is %.2f', mean_coverage)
+	non_zero_len = len([r for r in coverages if r.coverage != 0])
+	mean_coverage = sum(r.coverage for r in coverages) / non_zero_len
+	logger.info('Mean coverage excluding 0 values is %.2f', mean_coverage)
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
@@ -420,13 +426,14 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
 			if not args.cn:
-				height = min(coverage_factor * record.coverage / mean_coverage - 1, MAX_HEIGHT)
-				if height == 0.0:
-					height = 0.01
+				height = coverage_factor * record.coverage / mean_coverage
 			else:
 				height=record.coverage
-				print(height)
-
+			height = np.log2(height)
+			height = min(MAX_HEIGHT, height)
+			height = max(MIN_HEIGHT, height)
+			if height == 0.0:
+				height = 0.01
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
 			n += 1
 	logger.info('Added %s coverage probes', n)
@@ -576,9 +583,10 @@ def main():
 		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
 	n = 0
 	for event in events(vcf, CONTIG_LENGTHS):
-		height = ABERRATION_HEIGHTS[event.type]
 		end = event.end
+		height = ABERRATION_HEIGHTS[event.type]
 		make_segment(segmentation, event.chrom, event.start, end, height)
+
 		comment = format_comment(event.info)
 		if "rankScore" in event.info:
 			rank_score = int(event.info['RankScore'].partition(':')[2])
