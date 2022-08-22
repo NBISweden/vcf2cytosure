@@ -413,8 +413,9 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 	else:
 		coverages = [r for r in parse_snv_coverages(args) if r.chrom in CONTIG_LENGTHS]
 
-	mean_coverage = sum(r.coverage for r in coverages) / len(coverages)
-	logger.info('Mean coverage is %.2f', mean_coverage)
+	non_zero_len = len([r for r in coverages if r.coverage != 0])
+	mean_coverage = sum(r.coverage for r in coverages) / non_zero_len
+	logger.info('Mean coverage excluding 0 values is %.2f', mean_coverage)
 
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
