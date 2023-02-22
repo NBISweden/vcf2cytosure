@@ -1,8 +1,10 @@
 from setuptools import setup
 
+from __version__ import __version__
+
 setup(
 	name='vcf2cytosure',
-	version='0.7.1',
+	version=__version__,
 	author='Marcel Martin',
 	author_email='marcel.martin@scilifelab.se',
 	maintainer='Daniel Nilsson',
