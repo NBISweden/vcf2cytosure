@@ -400,7 +400,7 @@ def subtract_intervals(records, intervals):
 			yield record
 
 
-def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
+def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, blacklist):
 	"""
 	probes -- <probes> element
 	path -- path to tab-separated file with coverages
@@ -420,15 +420,19 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 	n = 0
 	for chromosome, records in group_by_chromosome(coverages):
 		coverage_factor = 1
-		if args.sex == 'male' and ( chromosome == 'Y' or chromosome == 'X'):
+		if args.sex == 'male' and (chromosome in ['Y','X']):
 			coverage_factor = 2
 
 		n_intervals = N_INTERVALS[chromosome]
 		for record in subtract_intervals(bin_coverages(records,args.bins), n_intervals):
+			if contained_by_blacklist(record, blacklist):
+				continue
+
 			if not args.cn:
 				height = coverage_factor * record.coverage / mean_coverage
 			else:
 				height=record.coverage
+
 			height = np.log2(height)
 			height = min(MAX_HEIGHT, height)
 			height = max(MIN_HEIGHT, height)
@@ -437,7 +441,6 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS):
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
 			n += 1
 	logger.info('Added %s coverage probes', n)
-
 
 #apply filtering
 def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FRQ'):
@@ -575,6 +578,7 @@ def main():
 	probes = tree.xpath('/data/cgh/probes')[0]
 	submission = tree.xpath('/data/cgh/submission')[0]
 
+	blacklist = []
 	if args.blacklist:
 		blacklist = [r for r in read_blacklist(args.blacklist) if r.chrom in CONTIG_LENGTHS]
 
@@ -619,7 +623,7 @@ def main():
 			make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
 		n += 1
 	if args.coverage or args.snv or args.cn:
-		add_coverage_probes(probes, args.coverage, args, CONTIG_LENGTHS, N_INTERVALS)
+		add_coverage_probes(probes, args.coverage, args, CONTIG_LENGTHS, N_INTERVALS, blacklist)
 
 	else:
 		add_probes_between_events(probes, chr_intervals, CONTIG_LENGTHS)
