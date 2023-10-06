@@ -1,6 +1,6 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
-from __version__ import __version__
+from vcf2cytosure.__version__ import __version__
 
 setup(
 	name='vcf2cytosure',
@@ -13,10 +13,9 @@ setup(
 	description='Convert VCF with structural variations to CytoSure format',
 	#long_description=long_description,
 	license='MIT',
-	#packages=[],
-	py_modules=['vcf2cytosure'],
+	packages=find_packages(exclude=["tests/", "dist/", "build/"]),
 	install_requires=['lxml','pandas', 'cyvcf2'],
-	entry_points={'console_scripts': ['vcf2cytosure=vcf2cytosure:main']},
+	entry_points={'console_scripts': ['vcf2cytosure=vcf2cytosure.vcf2cytosure:main']},
 	classifiers=[
 		"Development Status :: 3 - Alpha",
 		"Environment :: Console",

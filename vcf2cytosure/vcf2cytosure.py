@@ -4,7 +4,6 @@ Convert structural variants in a VCF to CGH (CytoSure) format
 """
 
 import argparse
-import sys
 import pandas as pd
 import logging
 import gzip
@@ -14,9 +13,9 @@ from io import StringIO
 from lxml import etree
 from cyvcf2 import VCF
 
-from constants import *
+from .constants import *
 
-from __version__ import __version__
+from .__version__ import __version__
 
 logger = logging.getLogger(__name__)
 
