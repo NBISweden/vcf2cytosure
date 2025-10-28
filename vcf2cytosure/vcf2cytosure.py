@@ -21,18 +21,18 @@ logger = logging.getLogger(__name__)
 
 Event = namedtuple('Event', ['chrom', 'start', 'end', 'type', 'info'])
 
+def remove_prefix(text, prefix):
+	"""remove prefix reimplemented to not break any pre python 3.9 installations"""
+	if text.lower().startswith(prefix):
+		return text[len(prefix):]
+	return text
+
 def events(variants, CONTIG_LENGTHS):
 	"""Iterate over variants and yield Events"""
 
 	for variant in variants:
 		if len(variant.ALT) != 1:
 			continue
-
-		def remove_prefix(text, prefix):
-			"""remove prefix reimplemented to not break any pre python 3.9 installations"""
-			if text.lower().startswith(prefix):
-				return text[len(prefix):]
-			return text
 
 		chrom = remove_prefix(variant.CHROM, "chr")
 		if chrom not in CONTIG_LENGTHS:
@@ -291,7 +291,7 @@ def parse_coverages(path):
 			if line.startswith('#'):
 				continue
 			content=line.split('\t')
-			chrom=content[0]
+			chrom=remove_prefix(content[0], "chr")
 			start=content[1]
 			end=content[2]
 			coverage=content[3]
@@ -315,7 +315,7 @@ def parse_cn_coverages(args):
 	df = pd.read_csv(args.cn, sep="\t")
 	for i in range(0,len(df["log2"])):
 
-		chrom = df["chromosome"][i]
+		chrom = remove_prefix(df["chromosome"][i], "chrom")
 		start = int(df["start"][i])
 		end = int(df["end"][i])
 		coverage =float(df["log2"][i])
@@ -347,7 +347,7 @@ def parse_snv_coverages(args):
 			print ("only .vcf or gziped vcf is allowed, exiting")
 
 		for snv in snv_list:
-			chrom = snv[0]
+			chrom = remove_prefix(snv[0], "chr")
 			start = snv[1]
 			end = start+1
 			coverage = snv[2]
