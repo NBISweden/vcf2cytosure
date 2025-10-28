@@ -27,7 +27,16 @@ def events(variants, CONTIG_LENGTHS):
 	for variant in variants:
 		if len(variant.ALT) != 1:
 			continue
+
+		def remove_prefix(text, prefix):
+			"""remove prefix reimplemented to not break any pre python 3.9 installations"""
+			if text.lower().startswith(prefix):
+				return text[len(prefix):]
+			return text
+
 		chrom = variant.CHROM
+		remove_prefix(chrom, "chr")
+
 		if chrom not in CONTIG_LENGTHS:
 			continue
 		start = variant.start
