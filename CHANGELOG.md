@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [0.9.3]
+- Update release automation build environment (#67)
+
 ## [0.9.2]
 - Remove any chr prefix from input chromosome contig name (#65)
 
