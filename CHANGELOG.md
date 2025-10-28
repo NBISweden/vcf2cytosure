@@ -1,7 +1,7 @@
 # CHANGELOG
 
-## [unreleased]
-- Remove any chr prefix from input chromosome contig name
+## [0.9.2]
+- Remove any chr prefix from input chromosome contig name (#65)
 
 ## [0.9]
 - Blacklist (excluded regions list) also hides probes
