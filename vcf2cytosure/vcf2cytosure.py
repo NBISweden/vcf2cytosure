@@ -34,9 +34,7 @@ def events(variants, CONTIG_LENGTHS):
 				return text[len(prefix):]
 			return text
 
-		chrom = variant.CHROM
-		remove_prefix(chrom, "chr")
-
+		chrom = remove_prefix(variant.CHROM, "chr")
 		if chrom not in CONTIG_LENGTHS:
 			continue
 		start = variant.start
