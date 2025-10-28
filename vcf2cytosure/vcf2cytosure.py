@@ -439,10 +439,10 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, blackli
 			else:
 				height=record.coverage
 
-			height = np.log2(height)
+			height = np.log2(height + 1e-8)
 			height = min(MAX_HEIGHT, height)
 			height = max(MIN_HEIGHT, height)
-			if height == 0.0:
+			if height == 0:
 				height = 0.01
 			make_probe(probes, record.chrom, record.start, record.end, height, 'coverage')
 			n += 1
