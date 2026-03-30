@@ -460,11 +460,16 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 				# Too short
 				continue
 
-		elif variant.INFO.get('SVTYPE') == 'BND':
-			bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
+		elif variant.INFO.get('SVTYPE') in ['BND', 'SGL']:
+			if "." in variant.ALT[0]:
+				# single end BNDs, also known as SGL, the ALT field has a dot notation
+				bnd_chrom = variant.CHROM
+				bnd_pos = variant.start
+			else:
+				bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
 
-			bnd_pos = int(variant.ALT[0].split(':')[1].split("]")[0].split("[")[0])
-			bnd_chrom= variant.ALT[0].split(':')[0].split("]")[-1].split("[")[-1]
+				bnd_pos = int(variant.ALT[0].split(':')[1].split("]")[0].split("[")[0])
+				bnd_chrom= variant.ALT[0].split(':')[0].split("]")[-1].split("[")[-1]
 
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
@@ -610,10 +615,10 @@ def main():
 		if "OCC" in event.info:
 			occ=event.info["OCC"]
 
-		if event.type in ("INV",'INS', 'BND',"TRA") and not event.end:
+		if event.type in ('INV', 'INS', 'BND', 'SGL', 'TRA') and not event.end:
 			continue
 			#pass
-		elif event.type in ("INV",'INS', 'BND',"TRA") and (abs(event.start-event.end) > args.maxbnd ):
+		elif event.type in ('INV', 'INS', 'BND', 'SGL', 'TRA') and (abs(event.start-event.end) > args.maxbnd ):
 			#pass
 			continue
 		elif args.blacklist:
