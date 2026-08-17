@@ -464,7 +464,7 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 			if "." in variant.ALT[0]:
 				# single end BNDs, also known as SGL, the ALT field has a dot notation
 				bnd_chrom = variant.CHROM
-				bnd_pos = variant.start
+				bnd_pos = variant.start + len(variant.ALT[0]) - 2
 			else:
 				bnd_pos = int(variant.ALT[0].split(':')[1].split("]")[0].split("[")[0])
 				bnd_chrom = variant.ALT[0].split(':')[0].split("]")[-1].split("[")[-1]
@@ -475,9 +475,8 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 		elif variant.INFO.get('SVTYPE') == 'TRA':
 			bnd_pos = variant.INFO.get('END')
 			bnd_chrom =variant.INFO.get('CHR2')
-
-						
-			continue
+			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
+				continue
 
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
