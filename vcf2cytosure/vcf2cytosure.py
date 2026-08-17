@@ -28,7 +28,7 @@ def remove_prefix(text, prefix):
         return text[len(prefix) :]
     return text
 
-    
+
 def events(variants, CONTIG_LENGTHS):
     """Iterate over variants and yield Events"""
 
@@ -640,7 +640,8 @@ def main():
     group.add_argument("--out", help="output file (default = the prefix of the input vcf)")
 
     group.add_argument(
-        "--blacklist", "--excludelist",
+        "--blacklist",
+        "--excludelist",
         help="Exclude list bed format file to exclude completely contained variants.",
     )
 
