@@ -2,11 +2,11 @@ from unittest.mock import patch
 
 import pytest
 
-import vcf2cytosure
+from vcf2cytosure.vcf2cytosure import main
 
 
 def test_version_argument():
-    with patch("sys.argv", ["vcf2cytosure.py", "--version"]):
+    with patch("sys.argv", ["vcf2cytosure", "--version"]):
         with pytest.raises(SystemExit) as excinfo:
-            vcf2cytosure.main()
+            main()
         assert excinfo.value.code == 0

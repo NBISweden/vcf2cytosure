@@ -1,10 +1,10 @@
-name: tests_and_cov.yml
+name: "Tests and coverage"
 on: ["push"]
 
 jobs:
   test:
     name: Run smoke test
-    
+
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
