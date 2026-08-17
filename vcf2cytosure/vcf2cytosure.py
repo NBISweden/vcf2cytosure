@@ -449,18 +449,18 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, blackli
 	logger.info('Added %s coverage probes', n)
 
 #apply filtering
-def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FRQ'):
+def variant_filter(variants, min_size: int=5000, max_bnd: int = 10000, max_frequency: float =0.01, frequency_tag: str ='FRQ'):
 
 	for variant in variants:
 
 		end = variant.INFO.get('END')
-		if end and not variant.INFO.get('SVTYPE') == 'TRA':
-
+		if end and variant.INFO.get('SVTYPE') != 'TRA':
 			if abs( int(end) - variant.start) <= min_size:
 				# Too short
 				continue
 
 		elif variant.INFO.get('SVTYPE') in ['BND', 'SGL']:
+
 			if "." in variant.ALT[0]:
 				# single end BNDs, also known as SGL, the ALT field has a dot notation
 				bnd_chrom = variant.CHROM
@@ -472,11 +472,17 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
 
+			if bnd_chrom != variant.CHROM and max_bnd:
+				continue
+
 		elif variant.INFO.get('SVTYPE') == 'TRA':
 			bnd_pos = variant.INFO.get('END')
-			bnd_chrom =variant.INFO.get('CHR2')
+			bnd_chrom = variant.INFO.get('CHR2')
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
+
+		if bnd_chrom != variant.CHROM and max_bnd:
+			continue
 
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
@@ -594,7 +600,7 @@ def main():
 
 	chr_intervals = defaultdict(list)
 	if args.do_filtering:
-		vcf = variant_filter(vcf,min_size=args.size,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
+		vcf = variant_filter(vcf,min_size=args.size,max_bnd=args.maxbnd,max_frequency=args.frequency,frequency_tag=args.frequency_tag)
 	n = 0
 	for event in events(vcf, CONTIG_LENGTHS):
 		end = event.end
@@ -607,18 +613,13 @@ def main():
 		else:
 			rank_score =0
 
-		#occ=0
-		#if args.frequency_tag in event.info:
-		#	occ=event.info[args.frequency_tag]
 		occ=0
 		if "OCC" in event.info:
 			occ=event.info["OCC"]
 
 		if event.type in ('INV', 'INS', 'BND', 'SGL', 'TRA') and not event.end:
 			continue
-			#pass
 		elif event.type in ('INV', 'INS', 'BND', 'SGL', 'TRA') and (abs(event.start-event.end) > args.maxbnd ):
-			#pass
 			continue
 		elif args.blacklist:
 			if contained_by_blacklist(event, blacklist):
