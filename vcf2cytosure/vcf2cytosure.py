@@ -481,9 +481,6 @@ def variant_filter(variants, min_size: int=5000, max_bnd: int = 10000, max_frequ
 			if bnd_chrom == variant.CHROM and abs(bnd_pos - variant.start) < min_size:
 				continue
 
-		if bnd_chrom != variant.CHROM and max_bnd:
-			continue
-
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
 			continue
