@@ -1,0 +1,13 @@
+name: "Ruff lint check and format"
+on:
+  pull_request:
+      types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+jobs:
+  lint_and_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/ruff-action@v4.1.0
+      - run: ruff check --fix
+      - run: ruff format --line-length 100
