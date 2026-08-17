@@ -1,21 +1,21 @@
-#!/usr/bin/env python3
 """
 Convert structural variants in a VCF to CGH (CytoSure) format
 """
 
 import argparse
-import pandas as pd
-import logging
 import gzip
-import numpy as np
-from collections import namedtuple, defaultdict
+import logging
+import sys
+from collections import defaultdict, namedtuple
 from io import StringIO
-from lxml import etree
-from cyvcf2 import VCF
 
-from .constants import *
+import numpy as np
+import pandas as pd
+from cyvcf2 import VCF
+from lxml import etree
 
 from .__version__ import __version__
+from .constants import *
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +56,16 @@ def events(variants, CONTIG_LENGTHS):
             if ":" in variant.ALT[0] and ("[" in variant.ALT[0] or "]" in variant.ALT[0]):
                 chrom2 = variant.ALT[0].split(":")[0].split("[")[-1].split("]")[-1]
             else:
-                print("invalid variant  type {}: skipping".format(variant.ALT[0]))
+                print(f"invalid variant  type {variant.ALT[0]}: skipping")
 
             if chrom2 != chrom:
                 logger.debug("%s at %s:%s", sv_type, chrom, start + 1)
                 yield Event(
-                    chrom=chrom, start=start, end=None, type=sv_type, info=dict(variant.INFO)
+                    chrom=chrom,
+                    start=start,
+                    end=None,
+                    type=sv_type,
+                    info=dict(variant.INFO),
                 )
 
             else:
@@ -73,7 +77,11 @@ def events(variants, CONTIG_LENGTHS):
 
                 logger.debug("%s at %s:%s", sv_type, chrom, start + 1)
                 yield Event(
-                    chrom=chrom, start=start, end=end, type=sv_type, info=dict(variant.INFO)
+                    chrom=chrom,
+                    start=start,
+                    end=end,
+                    type=sv_type,
+                    info=dict(variant.INFO),
                 )
 
 
@@ -118,7 +126,7 @@ def make_probe(parent, chromosome, start, end, height, text):
             "chromosome": CHROM_RENAME.get(chromosome, chromosome),
             "start": str(start + 1),
             "stop": str(end),
-            "normalized": "{:.3f}".format(-height),
+            "normalized": f"{-height:.3f}",
             "smoothed": "0.0",
             "smoothed_normalized": "0.0",
             "sequence": "AACCGGTT",
@@ -135,7 +143,7 @@ def make_probe(parent, chromosome, start, end, height, text):
             "row": "1",
             "column": "1",
             "red": str(red),
-            "green": "{:.3f}".format(green),
+            "green": f"{green:.3f}",
             "gSNR": "100.0",
             "rSNR": "100.0",
             "outlier": "false",
@@ -152,7 +160,7 @@ def make_segment(parent, chromosome, start, end, height):
             "numProbes": "100",
             "start": str(start + 1),
             "stop": str(end),
-            "average": "{:.3f}".format(-height),  # CytoSure inverts the sign
+            "average": f"{-height:.3f}",  # CytoSure inverts the sign
         }
     )
     return segment
@@ -181,32 +189,32 @@ def make_aberration(
 
     aberration = etree.SubElement(parent, "aberration")
     aberration.attrib.update(
-        dict(
-            chr=CHROM_RENAME.get(chromosome, chromosome),
-            start=str(start + 1),
-            stop=str(end),
-            maxStart=str(start + 1),
-            maxStop=str(end),
-            copyNumber=str(copy_number),
-            initialClassification="Unclassified",
-            finalClassification="Unclassified",
-            inheritance="Not_tested",
-            numProbes=str(n_probes),
-            startProbe="",
-            stopProbe="",
-            maxStartProbe="",
-            maxStopProbe="",
-            gain=is_gain,
-            method=method,
+        {
+            "chr": CHROM_RENAME.get(chromosome, chromosome),
+            "start": str(start + 1),
+            "stop": str(end),
+            "maxStart": str(start + 1),
+            "maxStop": str(end),
+            "copyNumber": str(copy_number),
+            "initialClassification": "Unclassified",
+            "finalClassification": "Unclassified",
+            "inheritance": "Not_tested",
+            "numProbes": str(n_probes),
+            "startProbe": "",
+            "stopProbe": "",
+            "maxStartProbe": "",
+            "maxStopProbe": "",
+            "gain": is_gain,
+            "method": method,
             # TODO fill in the following values with something sensible
-            automationLevel="1.0",
-            baseline="0.0",
-            mosaicism="0.0",
-            inheritanceCoverage="0.0",
-            logRatio="-0.4444",  # mean log ratio
-            p="0.003333",  # p-value
-            sd="0.2222",  # standard deviation
-        )
+            "automationLevel": "1.0",
+            "baseline": "0.0",
+            "mosaicism": "0.0",
+            "inheritanceCoverage": "0.0",
+            "logRatio": "-0.4444",  # mean log ratio
+            "p": "0.003333",  # p-value
+            "sd": "0.2222",  # standard deviation
+        }
     )
     if comment:
         e = etree.SubElement(aberration, "comments")
@@ -249,7 +257,7 @@ def format_comment(info):
     for k, v in sorted(info.items()):
         if k in ("CSQ", "SVTYPE"):
             continue
-        comment += "\n{}: {}".format(k, v)
+        comment += f"\n{k}: {v}"
     return comment
 
 
@@ -298,7 +306,7 @@ def add_probes_between_events(probes, chr_intervals, CONTIG_LENGTHS):
 
 
 class CoverageRecord:
-    __slots__ = ("chrom", "start", "end", "coverage")
+    __slots__ = ("chrom", "coverage", "end", "start")
 
     def __init__(self, chrom, start, end, coverage):
         self.chrom = chrom
@@ -327,25 +335,21 @@ def retrieve_snp(content, args):
     snp_data = []
     snp_data.append(content[0])
     snp_data.append(int(content[1]))
-    snp_data.append(float(content[7].split(";{}=".format(args.dp))[-1].split(";")[0]))
+    snp_data.append(float(content[7].split(f";{args.dp}=")[-1].split(";")[0]))
 
     return snp_data
 
 
 def parse_cn_coverages(args):
-    probe_data = []
-    opener = open
-    first = True
     df = pd.read_csv(args.cn, sep="\t")
-    for i in range(0, len(df["log2"])):
+    for i in range(len(df["log2"])):
         chrom = remove_prefix(df["chromosome"][i], "chrom")
         start = int(df["start"][i])
         end = int(df["end"][i])
         coverage = float(df["log2"][i])
 
-        if "gene" in df:
-            if df["gene"][i] == "Antitarget":
-                continue
+        if "gene" in df and df["gene"][i] == "Antitarget":
+            continue
 
         yield CoverageRecord(chrom, start, end, coverage)
 
@@ -353,18 +357,20 @@ def parse_cn_coverages(args):
 def parse_snv_coverages(args):
     snv_list = []
     if args.snv.endswith(".gz"):
-        for line in gzip.open(args.snv):
-            if line[0] == "#" or not ";{}=".format(args.dp) in line:
-                continue
-            content = line.strip().split()
-            snv_list.append(retrieve_snp(content, args))
+        with gzip.open(args.snv) as file:
+            for line in file:
+                if line[0] == "#" or f";{args.dp}=" not in line:
+                    continue
+                content = line.strip().split()
+                snv_list.append(retrieve_snp(content, args))
 
     elif args.snv.endswith(".vcf"):
-        for line in open(args.snv):
-            if line[0] == "#" or not ";{}=".format(args.dp) in line:
-                continue
-            content = line.strip().split()
-            snv_list.append(retrieve_snp(content, args))
+        with open(args.snv) as file:
+            for line in file:
+                if line[0] == "#" or f";{args.dp}=" not in line:
+                    continue
+                content = line.strip().split()
+                snv_list.append(retrieve_snp(content, args))
 
     else:
         print("only .vcf or gziped vcf is allowed, exiting")
@@ -387,10 +393,9 @@ def group_by_chromosome(records):
     prev_chrom = None
     chromosome_records = []
     for record in records:
-        if record.chrom != prev_chrom:
-            if chromosome_records:
-                yield prev_chrom, chromosome_records
-                chromosome_records = []
+        if record.chrom != prev_chrom and chromosome_records:
+            yield prev_chrom, chromosome_records
+            chromosome_records = []
         chromosome_records.append(record)
         prev_chrom = record.chrom
     if chromosome_records:
@@ -517,7 +522,7 @@ def variant_filter(
 
 
 class BlacklistRecord:
-    __slots__ = ("chrom", "start", "end")
+    __slots__ = ("chrom", "end", "start")
 
     def __init__(self, chrom, start, end):
         self.chrom = chrom
@@ -541,12 +546,10 @@ def read_blacklist(path):
 
 
 def contained_by_blacklist(event, blacklist):
-    for br in blacklist:
-        if event.chrom == br.chrom:
-            if event.start >= br.start and event.end <= br.end:
-                return True
-
-    return False
+    return any(
+        event.chrom == br.chrom and (event.start >= br.start and event.end <= br.end)
+        for br in blacklist
+    )
 
 
 # retrieve the sample id, assuming single sample vcf
@@ -565,10 +568,16 @@ def main():
 
     group = parser.add_argument_group("Filtering")
     group.add_argument(
-        "--size", default=1000, type=int, help="Minimum variant size. Default: %(default)s"
+        "--size",
+        default=1000,
+        type=int,
+        help="Minimum variant size. Default: %(default)s",
     )
     group.add_argument(
-        "--frequency", default=0.01, type=float, help="Maximum frequency. Default: %(default)s"
+        "--frequency",
+        default=0.01,
+        type=float,
+        help="Maximum frequency. Default: %(default)s",
     )
     group.add_argument(
         "--frequency_tag",
@@ -599,7 +608,10 @@ def main():
     )
     group.add_argument("--vcf", required=True, help="VCF file")
     group.add_argument(
-        "--bins", type=int, default=20, help="the number of coverage bins per probes default=20"
+        "--bins",
+        type=int,
+        default=20,
+        help="the number of coverage bins per probes default=20",
     )
     group.add_argument("--coverage", help="Coverage file")
     group.add_argument(
@@ -627,7 +639,8 @@ def main():
     group.add_argument("--out", help="output file (default = the prefix of the input vcf)")
 
     group.add_argument(
-        "--blacklist", help="Blacklist bed format file to exclude completely contained variants."
+        "--blacklist",
+        help="Blacklist bed format file to exclude completely contained variants.",
     )
 
     group.add_argument(
@@ -644,7 +657,7 @@ def main():
 
     if (args.coverage and args.cn) or (args.coverage and args.snv) or (args.snv and args.cn):
         print("Choose one of --coverage, --snv and --cn. They cannot be combined.")
-        quit()
+        sys.exit()
 
     if int(args.genome) == 38:
         CGH_TEMPLATE = CGH_TEMPLATE_38
@@ -671,7 +684,13 @@ def main():
     tree = etree.parse(
         StringIO(
             CGH_TEMPLATE.format(
-                sample_id, sample_id, sample_id, sample_id, sex_male, promega_sex, sex_male
+                sample_id,
+                sample_id,
+                sample_id,
+                sample_id,
+                sex_male,
+                promega_sex,
+                sex_male,
             )
         ),
         parser,
@@ -710,15 +729,15 @@ def main():
         if "OCC" in event.info:
             occ = event.info["OCC"]
 
-        if event.type in ("INV", "INS", "BND", "SGL", "TRA") and not event.end:
-            continue
-        elif event.type in ("INV", "INS", "BND", "SGL", "TRA") and (
-            abs(event.start - event.end) > args.maxbnd
+        if (
+            event.type in ("INV", "INS", "BND", "SGL", "TRA")
+            and not event.end
+            or event.type in ("INV", "INS", "BND", "SGL", "TRA")
+            and (abs(event.start - event.end) > args.maxbnd)
+            or args.blacklist
+            and contained_by_blacklist(event, blacklist)
         ):
             continue
-        elif args.blacklist:
-            if contained_by_blacklist(event, blacklist):
-                continue
 
         make_aberration(
             submission,
