@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [unreleased]
+- Handle SGL (single end BNDs) - ignore unless large insertions (#70)
+
 ## [0.9.3]
 - Update release automation build environment (#67)
 

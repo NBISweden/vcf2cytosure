@@ -11,6 +11,7 @@ ABERRATION_HEIGHTS = {
 	'INV': -0.5,
 	'INS': -1.5,
 	'BND': -2.0,
+	'SGL': -2.0,
 	'TRA': -2.0,
 }
 
