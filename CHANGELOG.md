@@ -4,6 +4,7 @@
 - Handle SGL (single end BNDs) - ignore unless large insertions (#70)
 - Lint and format code with ruff, add an action (#76)
 - Keep a changelog action (#76)
+- Run smoke test action on pull requests (#76)
 
 ## [0.9.3]
 - Update release automation build environment (#67)
