@@ -5,6 +5,8 @@
 - Lint and format code with ruff, add an action (#76)
 - Keep a changelog action (#76)
 - Run smoke test action on pull requests (#76)
+- Trim `chr` prefix from blacklist file (#77)
+- Provide an alias exclusionlist for blacklist, being deprecated (#77)
 
 ## [0.9.3]
 - Update release automation build environment (#67)

@@ -28,7 +28,7 @@ def remove_prefix(text, prefix):
         return text[len(prefix) :]
     return text
 
-
+    
 def events(variants, CONTIG_LENGTHS):
     """Iterate over variants and yield Events"""
 
@@ -525,7 +525,8 @@ class BlacklistRecord:
     __slots__ = ("chrom", "end", "start")
 
     def __init__(self, chrom, start, end):
-        self.chrom = chrom
+
+        self.chrom = remove_prefix(chrom, "chr")
         self.start = start
         self.end = end
 
@@ -639,8 +640,8 @@ def main():
     group.add_argument("--out", help="output file (default = the prefix of the input vcf)")
 
     group.add_argument(
-        "--blacklist",
-        help="Blacklist bed format file to exclude completely contained variants.",
+        "--blacklist", "--excludelist",
+        help="Exclude list bed format file to exclude completely contained variants.",
     )
 
     group.add_argument(
