@@ -466,8 +466,6 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 				bnd_chrom = variant.CHROM
 				bnd_pos = variant.start
 			else:
-				bnd_chrom, bnd_pos = variant.ALT[0][2:-1].split(':')
-
 				bnd_pos = int(variant.ALT[0].split(':')[1].split("]")[0].split("[")[0])
 				bnd_chrom = variant.ALT[0].split(':')[0].split("]")[-1].split("[")[-1]
 
@@ -475,9 +473,11 @@ def variant_filter(variants, min_size=5000,max_frequency=0.01, frequency_tag='FR
 				continue
 
 		elif variant.INFO.get('SVTYPE') == 'TRA':
-
 			bnd_pos = variant.INFO.get('END')
-			bnd_chrom =variant.INFO.get('CHR2');
+			bnd_chrom =variant.INFO.get('CHR2')
+
+						
+			continue
 
 		frequency = variant.INFO.get(frequency_tag)
 		if frequency is not None and frequency > max_frequency:
