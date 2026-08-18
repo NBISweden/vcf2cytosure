@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [unreleased]
+## [0.10.0]
 - Handle SGL (single end BNDs) - ignore unless large insertions (#70)
 - Lint and format code with ruff, add an action (#76)
 - Keep a changelog action (#76)
