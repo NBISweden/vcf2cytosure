@@ -641,8 +641,8 @@ def main():
 
     group.add_argument(
         "--excludelist",
-        "--excludelist",
-        help="Exclude list bed format file to exclude completely contained variants (deprecated alias: --excludelist).",
+        "--blacklist",
+        help="Exclude list bed format file to exclude completely contained variants (deprecated alias: --blacklist).",
     )
 
     group.add_argument(
