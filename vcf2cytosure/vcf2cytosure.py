@@ -434,7 +434,7 @@ def subtract_intervals(records, intervals):
             yield record
 
 
-def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, blacklist):
+def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, excludelist):
     """
     probes -- <probes> element
     path -- path to tab-separated file with coverages
@@ -459,7 +459,7 @@ def add_coverage_probes(probes, path, args, CONTIG_LENGTHS, N_INTERVALS, blackli
 
         n_intervals = N_INTERVALS[chromosome]
         for record in subtract_intervals(bin_coverages(records, args.bins), n_intervals):
-            if contained_by_blacklist(record, blacklist):
+            if contained_by_excludelist(record, excludelist):
                 continue
 
             if not args.cn:
@@ -521,17 +521,18 @@ def variant_filter(
         yield variant
 
 
-class BlacklistRecord:
+class ExcludelistRecord:
     __slots__ = ("chrom", "end", "start")
 
     def __init__(self, chrom, start, end):
-        self.chrom = chrom
+
+        self.chrom = remove_prefix(chrom, "chr")
         self.start = start
         self.end = end
 
 
-# read Blacklist
-def read_blacklist(path):
+# read excludelist
+def read_excludelist(path):
     with open(path) as f:
         for line in f:
             if line.startswith("#"):
@@ -542,13 +543,13 @@ def read_blacklist(path):
             end = content[2]
             start = int(start)
             end = int(end)
-            yield BlacklistRecord(chrom, start, end)
+            yield ExcludelistRecord(chrom, start, end)
 
 
-def contained_by_blacklist(event, blacklist):
+def contained_by_excludelist(event, excludelist):
     return any(
         event.chrom == br.chrom and (event.start >= br.start and event.end <= br.end)
-        for br in blacklist
+        for br in excludelist
     )
 
 
@@ -639,8 +640,9 @@ def main():
     group.add_argument("--out", help="output file (default = the prefix of the input vcf)")
 
     group.add_argument(
+        "--excludelist",
         "--blacklist",
-        help="Blacklist bed format file to exclude completely contained variants.",
+        help="Exclude list bed format file to exclude completely contained variants (deprecated alias: --blacklist).",
     )
 
     group.add_argument(
@@ -700,9 +702,9 @@ def main():
     probes = tree.xpath("/data/cgh/probes")[0]
     submission = tree.xpath("/data/cgh/submission")[0]
 
-    blacklist = []
-    if args.blacklist:
-        blacklist = [r for r in read_blacklist(args.blacklist) if r.chrom in CONTIG_LENGTHS]
+    excludelist = []
+    if args.excludelist:
+        excludelist = [r for r in read_excludelist(args.excludelist) if r.chrom in CONTIG_LENGTHS]
 
     chr_intervals = defaultdict(list)
     if args.do_filtering:
@@ -734,8 +736,8 @@ def main():
             and not event.end
             or event.type in ("INV", "INS", "BND", "SGL", "TRA")
             and (abs(event.start - event.end) > args.maxbnd)
-            or args.blacklist
-            and contained_by_blacklist(event, blacklist)
+            or args.excludelist
+            and contained_by_excludelist(event, excludelist)
         ):
             continue
 
@@ -756,7 +758,7 @@ def main():
             make_probe(probes, event.chrom, pos, pos + 60, height, event.type)
         n += 1
     if args.coverage or args.snv or args.cn:
-        add_coverage_probes(probes, args.coverage, args, CONTIG_LENGTHS, N_INTERVALS, blacklist)
+        add_coverage_probes(probes, args.coverage, args, CONTIG_LENGTHS, N_INTERVALS, excludelist)
 
     else:
         add_probes_between_events(probes, chr_intervals, CONTIG_LENGTHS)

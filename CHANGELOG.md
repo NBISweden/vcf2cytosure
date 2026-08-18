@@ -5,6 +5,8 @@
 - Lint and format code with ruff, add an action (#76)
 - Keep a changelog action (#76)
 - Run smoke test action on pull requests (#76)
+- Trim `chr` prefix from excludelist file (#77)
+- Provide an excludelist option, alias blacklist being deprecated (#77)
 
 ## [0.9.3]
 - Update release automation build environment (#67)
@@ -13,7 +15,7 @@
 - Remove any chr prefix from input chromosome contig name (#65)
 
 ## [0.9]
-- Blacklist (excluded regions list) also hides probes
+- excludelist (excluded regions list) also hides probes
 
 ## [0.8]
 - Changed coverage probe height calculation to a log2-ratio

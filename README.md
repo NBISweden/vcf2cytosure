@@ -41,6 +41,11 @@ The binning of the input coverage file may be controlled using the --bins parame
 Here 50 coverage bins will be pooled into one probe. The number of probes affect the amount of detail and resolution in the analysis.
 A large number of probes will make cytosure sluggish.
 
+It is beneficial to the analyst to have the export ignore variants in noisy genomic regions. Consider using e.g. the ENCODE problematic regions
+exclude file or similar to avoid an excess of calls in these regions - unless your pipeline already suppresses such calls by other means.
+
+    vcf2cytosure --vcf <input.vcf> --out <output.cgh> --excludelist hg38.encode.problematic_regions.v2.bed --sex <male|female> --size 30000 --genome 38 --coverage <coverage_bed> 
+
 ## Structural variants
 Structural variant (SV) types DEL, DUP, TDUP, IDUP, INV, and INS are supported.
 For each SVs, at least three probes are generated. If the SV is large enough,
